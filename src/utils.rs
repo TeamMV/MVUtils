@@ -44,7 +44,7 @@ macro_rules! impl_xtraimath {
     ($($t:ty),*) => {
         $(
             impl XTraIMath for $t {
-                fn overlap(&self, min: $t, max: $t) -> $t {
+                fn overlap(self, min: $t, max: $t) -> $t {
                     if self > max {
                         return min + (self - max - 1) % (max - min + 1);
                     }
@@ -66,11 +66,11 @@ macro_rules! impl_xtrafmath {
         $(
             impl XTraFMath for $t {
                 fn percentage(self, total: $t) -> $t {
-                    self / total * 100
+                    self / total * 100.0
                 }
 
                 fn value(self, total: $t) -> $t {
-                    self / 100 * total
+                    self / 100.0 * total
                 }
             }
         )*
@@ -90,3 +90,12 @@ macro_rules! impl_xtramath {
     };
 }
 
+pub trait TetrahedronOp {
+    fn yn<T>(self, yes: T, no: T) -> T;
+}
+
+impl TetrahedronOp for bool {
+    fn yn<T>(self, yes: T, no: T) -> T {
+        if self { yes } else { no }
+    }
+}
