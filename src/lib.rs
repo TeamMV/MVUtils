@@ -1,14 +1,14 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+mod utils;
+mod version;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::version::Version;
+    use crate::*;
+    use crate::utils::*;
 
     #[test]
     fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+        let a: f32 = 3.14;
     }
 }
