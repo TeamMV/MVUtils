@@ -1,5 +1,4 @@
 use crate::*;
-use crate::functions::Predicate;
 
 pub trait Plural {
     fn plural(&self, count: u32) -> Self;

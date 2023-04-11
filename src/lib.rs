@@ -5,7 +5,6 @@ pub mod args;
 
 #[cfg(test)]
 mod tests {
-    use once_cell::sync::Lazy;
     use crate::version::Version;
     use crate::*;
     use crate::logger::*;

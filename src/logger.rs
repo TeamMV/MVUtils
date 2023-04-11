@@ -1,4 +1,3 @@
-use once_cell::sync::Lazy;
 use std::string::ToString;
 use chrono::{Datelike, Timelike, Utc};
 use crate::logger::LogLevel::{DEBUG, ERROR, INFO, WARN};
