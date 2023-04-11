@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::cmp::Ordering;
@@ -45,7 +44,7 @@ impl Version {
             digits = version.replace("#version", "").replace(" ", "").chars().map(|c| c as u16 - 48).collect::<Vec<_>>();
         }
         else {
-            let mut results = version.replace("v", "").replace(" ", "").split(".").map(u16::from_str).collect::<Vec<_>>();
+            let results = version.replace("v", "").replace(" ", "").split(".").map(u16::from_str).collect::<Vec<_>>();
             if results.iter().any(Result::is_err) {
                 return None;
             }
@@ -53,27 +52,29 @@ impl Version {
         }
 
         if digits.len() == 1 {
-            return Some(Version {
+            Some(Version {
                 major: digits[0],
                 minor: 0,
                 patch: 0,
-            });
+            })
         }
         else if digits.len() == 2 {
-            return Some(Version {
+            Some(Version {
                 major: digits[0],
                 minor: digits[1],
                 patch: 0,
-            });
+            })
         }
         else if digits.len() == 3 {
-            return Some(Version {
+            Some(Version {
                 major: digits[0],
                 minor: digits[1],
                 patch: digits[2],
-            });
+            })
         }
-        return None;
+        else {
+            None
+        }
     }
 
     pub fn to_glsl_string(&self) -> String {
