@@ -15,11 +15,8 @@ mod tests {
             my_res
         }, |e| {
             println!("{}", e);
+            return Some(());
         });
-
-        if value.is_none() {
-            return;
-        }
 
         println!("{}", value.unwrap_or(-1));
     }

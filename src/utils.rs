@@ -105,7 +105,10 @@ macro_rules! try_catch {
         match $t {
             Ok(v) => Some(v),
             Err(e) => {
-                $c(e);
+                let val = $c(e);
+                if let Some(ret) = val {
+                    return ret;
+                }
                 None
             }
         }
