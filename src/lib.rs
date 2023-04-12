@@ -5,7 +5,6 @@ pub mod args;
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
     use crate::try_catch;
 
     #[test]
