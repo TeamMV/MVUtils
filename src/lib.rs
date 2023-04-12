@@ -5,6 +5,7 @@ pub mod args;
 
 #[cfg(test)]
 mod tests {
+    use std::any::Any;
     use crate::try_catch;
 
     #[test]
@@ -15,6 +16,11 @@ mod tests {
         }, |e| {
             println!("{}", e);
         });
+
+        if value.is_none() {
+            return;
+        }
+
         println!("{}", value.unwrap_or(-1));
     }
 }
