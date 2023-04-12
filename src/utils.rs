@@ -98,3 +98,18 @@ impl TetrahedronOp for bool {
         if self { yes } else { no }
     }
 }
+
+#[macro_export]
+macro_rules! try_catch {
+    ($t:expr, $c:expr) => {
+        {
+            match $t {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    $c(e);
+                    None
+                }
+            }
+        }
+    };
+}
