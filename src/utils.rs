@@ -114,3 +114,82 @@ macro_rules! try_catch {
         }
     };
 }
+
+#[macro_export]
+macro_rules! try_fn_catch {
+    ($t:expr, $c:expr) => {
+        match $t() {
+            Ok(v) => Some(v),
+            Err(e) => {
+                let val = $c(e);
+                if let Some(ret) = val {
+                    return ret;
+                }
+                None
+            }
+        }
+    };
+}
+
+/// Sometimes, in the try_fn_catch macro, the ? operator breaks and the return type is unknown.
+/// This macro is a copy of the old try! macro, but for some reason I do not understand, this does
+/// work.
+#[macro_export]
+macro_rules! ret_err {
+    ($r:expr) => {
+        match $t {
+            Result::Ok(v) => v,
+            Result::Err(e) => {
+                return Result::Err(e);
+            }
+        }
+    };
+}
+
+pub trait SplitInto {
+    fn split_into(self, n: usize) -> Vec<Self> where Self: Sized;
+}
+
+impl<T> SplitInto for Vec<T> {
+    fn split_into(mut self, n: usize) -> Vec<Self> {
+        let len = self.len();
+        assert!(n > 0);
+
+        if n == 1 {
+            return vec![self];
+        }
+
+        let mut parts = Vec::with_capacity(n);
+        for _ in 0..n {
+            parts.push(Vec::<T>::new());
+        }
+
+        if n >= len {
+            for i in 0..len {
+                if i < len {
+                    parts[len - i - 1].push(self.pop().unwrap());
+                }
+            }
+            return parts;
+        }
+
+        let mut index = 0usize;
+        let split_data_length = self.len() / n;
+        let mut extra = self.len() % n;
+        self.reverse();
+
+        for i in 0..n {
+            let mut length = split_data_length;
+            if extra > 0 {
+                length += 1;
+                extra -= 1;
+            }
+            for j in 0..length {
+                parts[i].push(self.pop().unwrap())
+            }
+            index += length;
+        }
+
+        return parts;
+    }
+}

@@ -2,21 +2,25 @@ pub mod utils;
 pub mod version;
 pub mod logger;
 pub mod args;
+pub mod buffer;
 
 #[cfg(test)]
 mod tests {
     use crate::try_catch;
+    use crate::utils::SplitInto;
 
     #[test]
     fn it_works() {
-        let value = try_catch!({
-            let my_res: Result<i32, String> = Err("hello".to_string());
-            my_res
-        }, |e| {
-            println!("{}", e);
-            return Some(());
-        });
+        let vec = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        let split = vec.split_into(3);
+        println!("{:?}", split);
 
-        println!("{}", value.unwrap_or(-1));
+        //let value = try_catch!({
+        //    String::from_utf8(vec![b'a', b'b', b'c'])
+        //}, |e| {
+        //    println!("{}", e);
+        //    return Some(());
+        //});
+        //println!("{}", value.unwrap());
     }
 }
