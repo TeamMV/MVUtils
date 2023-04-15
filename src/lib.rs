@@ -15,12 +15,12 @@ mod tests {
         let split = vec.split_into(3);
         println!("{:?}", split);
 
-        //let value = try_catch!({
-        //    String::from_utf8(vec![b'a', b'b', b'c'])
-        //}, |e| {
-        //    println!("{}", e);
-        //    return Some(());
-        //});
-        //println!("{}", value.unwrap());
+        let value = try_catch!({
+            String::from_utf8(vec![b'a', b'b', b'c'])
+        }, |e| {
+            println!("{}", e);
+            return Some(());
+        });
+        println!("{}", value.unwrap());
     }
 }

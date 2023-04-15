@@ -173,7 +173,6 @@ impl<T> SplitInto for Vec<T> {
             return parts;
         }
 
-        let mut index = 0usize;
         let split_data_length = self.len() / n;
         let mut extra = self.len() % n;
         self.reverse();
@@ -184,10 +183,9 @@ impl<T> SplitInto for Vec<T> {
                 length += 1;
                 extra -= 1;
             }
-            for j in 0..length {
+            for _ in 0..length {
                 parts[i].push(self.pop().unwrap())
             }
-            index += length;
         }
 
         return parts;
