@@ -1,3 +1,5 @@
+extern crate alloc;
+
 pub mod utils;
 pub mod version;
 pub mod logger;

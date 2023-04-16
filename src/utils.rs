@@ -1,3 +1,4 @@
+use alloc::ffi::CString;
 use std::ffi::{c_char, CString};
 use crate::*;
 use std::time::*;
@@ -224,3 +225,27 @@ impl Time for u128 {
         SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_nanos()
     }
 }
+
+
+pub trait IncDec {
+    fn inc(&self);
+    fn dec(&self);
+}
+
+macro_rules! impl_incr {
+    ($($typ:ty),*) => {
+        $(
+            impl IncDec for $typ {
+                fn inc(&self) {
+                    self += 1$typ;
+                }
+
+                fn dec(&self) {
+                    self -= 1$typ;
+                }
+            }
+        )*
+    };
+}
+
+impl_incr!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64);
