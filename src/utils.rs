@@ -1,5 +1,6 @@
 use alloc::ffi::CString;
-use std::ffi::{c_char, CString};
+use std::ffi::{c_char};
+use std::ops::Add;
 use crate::*;
 use std::time::*;
 
@@ -228,24 +229,31 @@ impl Time for u128 {
 
 
 pub trait IncDec {
-    fn inc(&self);
-    fn dec(&self);
+    fn inc(self)  -> Self;
+    fn dec(self) -> Self;
 }
 
 macro_rules! impl_incr {
     ($($typ:ty),*) => {
         $(
             impl IncDec for $typ {
-                fn inc(&self) {
-                    self += 1$typ;
+                fn inc(self) -> Self {
+                    self + 1 as $typ
                 }
 
-                fn dec(&self) {
-                    self -= 1$typ;
+                fn dec(self) -> Self {
+                    self - 1 as $typ
                 }
             }
         )*
     };
 }
 
-impl_incr!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64);
+impl_incr!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64)
+
+#[macro_export]
+macro_rules ! init_arr {
+    ($len:expr, $item:expr) => {
+        [0; $len].map(|_| $item)
+    };
+}
