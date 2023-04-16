@@ -1,5 +1,6 @@
 use std::ffi::{c_char, CString};
 use crate::*;
+use std::time::*;
 
 pub trait Plural {
     fn plural(&self, count: u32) -> Self;
@@ -193,22 +194,33 @@ impl<T> SplitInto for Vec<T> {
     }
 }
 
-pub trait AsCStrPtr {
-    fn as_c_ptr(&self) -> *const c_char;
+pub trait AsCStr {
+    fn as_c_str(&self) -> CString;
 }
 
-impl AsCStrPtr for str {
-    fn as_c_ptr(&self) -> *const c_char {
-        unsafe {
-            CString::new(self).unwrap().as_ptr()
-        }
+impl AsCStr for str {
+    fn as_c_str(&self) -> CString {
+        CString::new(self.to_string()).expect("Illegal CString format!")
     }
 }
 
-impl AsCStrPtr for String {
-    fn as_c_ptr(&self) -> *const c_char {
-        unsafe {
-            CString::new(self).unwrap().as_ptr()
-        }
+impl AsCStr for String {
+    fn as_c_str(&self) -> CString {
+        CString::new(self.clone()).expect("Illegal CString format!")
+    }
+}
+
+pub trait Time {
+    fn time_millis() -> Self;
+    fn time_nanos() -> Self;
+}
+
+impl Time for u128 {
+    fn time_millis() -> Self {
+        SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis()
+    }
+
+    fn time_nanos() -> Self {
+        SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_nanos()
     }
 }
