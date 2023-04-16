@@ -249,7 +249,7 @@ macro_rules! impl_incr {
     };
 }
 
-impl_incr!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64)
+impl_incr!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64);
 
 #[macro_export]
 macro_rules ! init_arr {
