@@ -1,3 +1,4 @@
+use std::ffi::{c_char, CString};
 use crate::*;
 
 pub trait Plural {
@@ -189,5 +190,25 @@ impl<T> SplitInto for Vec<T> {
         }
 
         return parts;
+    }
+}
+
+pub trait AsCStrPtr {
+    fn as_c_ptr(&self) -> *const c_char;
+}
+
+impl AsCStrPtr for str {
+    fn as_c_ptr(&self) -> *const c_char {
+        unsafe {
+            CString::new(self).unwrap().as_ptr()
+        }
+    }
+}
+
+impl AsCStrPtr for String {
+    fn as_c_ptr(&self) -> *const c_char {
+        unsafe {
+            CString::new(self).unwrap().as_ptr()
+        }
     }
 }
