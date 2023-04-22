@@ -1,6 +1,4 @@
 use alloc::ffi::CString;
-use std::ffi::{c_char};
-use std::ops::Add;
 use crate::*;
 use std::time::*;
 
@@ -256,4 +254,24 @@ macro_rules ! init_arr {
     ($len:expr, $item:expr) => {
         [0; $len].map(|_| $item)
     };
+}
+
+pub trait SplitSized {
+    fn split_sized(&self, n: usize) -> Vec<Self> where Self: Sized;
+}
+
+impl SplitSized for String {
+    fn split_sized(&self, n: usize) -> Vec<Self> {
+        assert!(n > 0);
+        let mut vec = vec![];
+        let mut buf = String::new();
+        for c in self.chars() {
+            buf.push(c);
+            if buf.len() >= n {
+                vec.push(buf);
+                buf = String::new();
+            }
+        }
+        vec
+    }
 }
