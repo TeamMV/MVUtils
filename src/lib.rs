@@ -5,6 +5,7 @@ pub mod version;
 pub mod logger;
 pub mod args;
 pub mod buffer;
+pub mod screen;
 
 #[cfg(test)]
 mod tests {
