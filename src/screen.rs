@@ -2,6 +2,7 @@ pub struct Measurements;
 impl Measurements {
     pub fn compute(dpi: f32, value: f32, me: &Measurement) -> f32 {
         match me {
+            Measurement::PX => { value }
             Measurement::MM => { dpi / 25.4 * value}
             Measurement::CM => { dpi / 2.54 * value}
             Measurement::DM => { dpi / 0.254 * value}
@@ -13,6 +14,7 @@ impl Measurements {
 }
 
 pub enum Measurement {
+    PX,
     MM,
     CM,
     DM,

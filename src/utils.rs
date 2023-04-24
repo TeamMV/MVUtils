@@ -275,3 +275,10 @@ impl SplitSized for String {
         vec
     }
 }
+
+#[macro_export]
+macro_rules! deref {
+    ($e:expr) => {
+        unsafe {*$e}
+    };
+}

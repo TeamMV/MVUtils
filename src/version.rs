@@ -81,7 +81,7 @@ impl Version {
         format!("#version {}{}{}", self.major, self.minor, self.patch)
     }
 
-    pub fn to_vulkan_version(&self) -> u32 {
+    pub fn as_vulkan_version(&self) -> u32 {
         ((self.major as u32) << 22) | ((self.minor as u32) << 12) | (self.patch as u32)
     }
 
@@ -132,6 +132,6 @@ impl PartialOrd for Version {
 
 impl Hash for Version {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.to_vulkan_version().hash(state);
+        self.as_vulkan_version().hash(state);
     }
 }
