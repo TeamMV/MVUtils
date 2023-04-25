@@ -1,4 +1,6 @@
 use alloc::ffi::CString;
+use alloc::rc::Rc;
+use std::cell::RefCell;
 use crate::*;
 use std::time::*;
 
@@ -282,3 +284,5 @@ macro_rules! deref {
         unsafe {*$e}
     };
 }
+
+pub type R<T> = Rc<RefCell<T>>;
