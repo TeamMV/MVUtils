@@ -285,4 +285,19 @@ macro_rules! deref {
     };
 }
 
-pub type R<T> = Rc<RefCell<T>>;
+pub type RcMut<T> = Rc<RefCell<T>>;
+
+pub trait Verify {
+    fn verify(&self) -> bool;
+    fn verify_or_panic(&self, message: &str) {
+        if !self.verify() {
+            panic!("{}", message);
+        }
+    }
+
+    fn verify_or_panic_default(&self) {
+        if!self.verify() {
+            panic!("Illegal state, value cannot be verified!");
+        }
+    }
+}
