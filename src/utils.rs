@@ -318,6 +318,28 @@ macro_rules! inner_sealable {
                     impl private::Sealed for $d t {}
                 )*
             };
+            (
+                $d(#[$d outer:meta])*
+                $d vis:vis struct $d name:ident {
+                    $d($d inner:tt)*
+                }
+            ) => {
+                $d(#[$d outer])*
+                $d vis struct $d name {
+                    $d($d inner)*
+                }
+
+                impl private::Sealed for $d name {}
+            };
+            (
+                $d(#[$d outer:meta])*
+                $d vis:vis struct $d name:ident;
+            ) => {
+                $d(#[$d outer])*
+                $d vis struct $d name;
+
+                impl private::Sealed for $d name {}
+            };
         }
     };
 }
@@ -325,8 +347,34 @@ macro_rules! inner_sealable {
 #[macro_export]
 macro_rules! sealable {
     () => {
-        use mvutils::inner_sealable;
+        use $crate::inner_sealable;
         inner_sealable!($);
+    };
+}
+
+#[macro_export]
+macro_rules! sealed {
+    (
+        $(#[$outer:meta])*
+        $vis:vis trait $name:ident: $a:ident $(+$t:ident)* {
+            $($inner:item)*
+        }
+    ) => {
+        $(#[$outer])*
+        $vis trait $name: Sealed + $a $(+$t)* {
+            $($inner)*
+        }
+    };
+    (
+        $(#[$outer:meta])*
+        $vis:vis trait $name:ident {
+            $($inner:item)*
+        }
+    ) => {
+        $(#[$outer])*
+        $vis trait $name: Sealed {
+            $($inner)*
+        }
     };
 }
 
