@@ -301,3 +301,47 @@ pub trait Verify {
         }
     }
 }
+
+#[macro_export]
+macro_rules! inner_sealable {
+    ($d:tt) => {
+        use private::Sealed;
+
+        mod private {
+            pub trait Sealed {}
+        }
+
+        #[macro_export]
+        macro_rules! seal {
+            ($d($d t:ty),*) => {
+                $d(
+                    impl private::Sealed for $d t {}
+                )*
+            };
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! sealable {
+    () => {
+        use mvutils::inner_sealable;
+        inner_sealable!($);
+    };
+}
+
+#[macro_export]
+macro_rules! unsafe_cast {
+    ($val:ident, $to:ty) => {
+        unsafe { (($val as *const _) as *const $to).as_ref().unwrap() }
+    };
+}
+
+#[macro_export]
+macro_rules! swap {
+    ($a:ident, $b:ident) => {
+        let tmp = $a;
+        let $a = $b;
+        let $b = tmp;
+    };
+}
