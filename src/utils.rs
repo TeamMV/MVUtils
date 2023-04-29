@@ -341,6 +341,32 @@ macro_rules! inner_sealable {
                 impl private::Sealed for $d name {}
             };
         }
+
+        #[macro_export]
+        macro_rules! sealed {
+            (
+                $d(#[$d outer:meta])*
+                $d vis:vis trait $d name:ident: $d a:ident $d(+$d t:ident)* {
+                    $d($d inner:item)*
+                }
+            ) => {
+                $d(#[$d outer])*
+                $d vis trait $d name: Sealed + $d a $d(+$d t)* {
+                    $d($d inner)*
+                }
+            };
+            (
+                $d(#[$d outer:meta])*
+                $d vis:vis trait $d name:ident {
+                    $d($d inner:item)*
+                }
+            ) => {
+                $d(#[$d outer])*
+                $d vis trait $d name: Sealed {
+                    $d($d inner)*
+                }
+            };
+        }
     };
 }
 
@@ -349,32 +375,6 @@ macro_rules! sealable {
     () => {
         use $crate::inner_sealable;
         inner_sealable!($);
-    };
-}
-
-#[macro_export]
-macro_rules! sealed {
-    (
-        $(#[$outer:meta])*
-        $vis:vis trait $name:ident: $a:ident $(+$t:ident)* {
-            $($inner:item)*
-        }
-    ) => {
-        $(#[$outer])*
-        $vis trait $name: Sealed + $a $(+$t)* {
-            $($inner)*
-        }
-    };
-    (
-        $(#[$outer:meta])*
-        $vis:vis trait $name:ident {
-            $($inner:item)*
-        }
-    ) => {
-        $(#[$outer])*
-        $vis trait $name: Sealed {
-            $($inner)*
-        }
     };
 }
 
