@@ -286,6 +286,11 @@ macro_rules! deref {
 }
 
 pub type RcMut<T> = Rc<RefCell<T>>;
+pub type Bytecode = Vec<u8>;
+
+pub fn rc_mut<T>(t: T) -> RcMut<T> {
+    Rc::new(RefCell::new(t))
+}
 
 pub trait Verify {
     fn verify(&self) -> bool;
