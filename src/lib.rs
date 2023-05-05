@@ -9,6 +9,7 @@ pub mod serialize;
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::next_id;
 
     #[test]
     fn it_works() {

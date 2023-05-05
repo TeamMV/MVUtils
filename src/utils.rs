@@ -1,6 +1,9 @@
 use alloc::ffi::CString;
 use alloc::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 use crate::*;
 use std::time::*;
 
@@ -397,4 +400,62 @@ macro_rules! swap {
         let $a = $b;
         let $b = tmp;
     };
+}
+
+struct L<T, F = fn() -> T> {
+    val: Option<T>,
+    gen: Option<F>
+}
+
+impl<T, F: FnOnce() -> T> L<T, F> {
+    fn new(gen: F) -> Self {
+        L {
+            val: None,
+            gen: Some(gen)
+        }
+    }
+
+    fn force(&mut self) -> &mut T {
+        if let Some(ref mut val) = self.val {
+            val
+        }
+        else if let Some(gen) = self.gen.take() {
+            self.val = Some(gen());
+            self.val.as_mut().unwrap()
+        }
+        else {
+            panic!();
+        }
+    }
+}
+
+impl<T, F: FnOnce() -> T> Deref for L<T, F> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        unsafe {
+            (self as *const L<T, F>).cast_mut().as_mut().unwrap().force()
+        }
+    }
+}
+
+impl<T, F: FnOnce() -> T> DerefMut for L<T, F> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.force()
+    }
+}
+
+static mut ids: L<HashMap<String, u64>> = L { val: None, gen: Some(HashMap::new) };
+
+pub fn next_id(key: &str) -> u64 {
+    unsafe {
+        if ids.contains_key(key) {
+            let id = ids.get_mut(key).unwrap();
+            *id += 1;
+            id.clone()
+        }
+        else {
+            ids.insert(key.to_string(), 0);
+            0
+        }
+    }
 }
