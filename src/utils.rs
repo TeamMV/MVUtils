@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut, Div, Mul};
+use std::ops::{Add, Deref, DerefMut, Div, Mul, Rem, Sub};
 use std::time::*;
-use num_traits::Num;
+use num_traits::One;
 
 pub trait Plural {
     fn plural(&self, count: u32) -> Self;
@@ -43,7 +43,7 @@ pub trait Overlap {
     fn overlap(self, min: Self, max: Self) -> Self;
 }
 
-impl<T: Num + Ord + Copy> Overlap for T {
+impl<T: Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + One + Ord + Copy> Overlap for T {
     fn overlap(self, min: T, max: T) -> Self {
         if self > max {
             return min + (self - max - T::one()) % (max - min + T::one());
@@ -196,7 +196,7 @@ pub trait IncDec {
     fn dec(self) -> Self;
 }
 
-impl<T: Num + Copy> IncDec for T {
+impl<T: Add<T, Output = T> + Sub<T, Output = T> + One + Copy> IncDec for T {
     fn inc(self) -> Self {
         self + T::one()
     }

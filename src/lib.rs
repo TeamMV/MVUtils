@@ -1,5 +1,3 @@
-extern crate alloc;
-
 pub mod utils;
 pub mod version;
 pub mod args;
@@ -8,6 +6,7 @@ pub mod save;
 
 #[cfg(test)]
 mod tests {
+
     #[test]
     fn it_works() {
 
