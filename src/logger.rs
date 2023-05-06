@@ -1,5 +1,4 @@
 use std::string::ToString;
-use chrono::{Datelike, Timelike, Utc};
 use crate::logger::LogLevel::{DEBUG, ERROR, INFO, WARN};
 
 pub struct Logger<F> {

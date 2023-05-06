@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 use std::env::Args;
+use crate::sealable;
+
+sealable!();
 
 pub struct ParsedArgs {
     command: String,
@@ -11,28 +14,26 @@ impl ParsedArgs {
         self.command.clone()
     }
 
-    pub fn arg(&self, key: &str) -> String {
-        if let Some(value) = self.args.get(key) {
-            value.clone()
-        }
-        else {
-            String::new()
-        }
+    pub fn arg(&self, key: &str) -> Option<String> {
+        self.args.get(key).cloned()
     }
 
-    pub fn multi_key_arg(&self, keys: Vec<&str>) -> String {
+    pub fn multi_key_arg(&self, keys: Vec<&str>) -> Option<String> {
         for key in keys {
-            if let Some(value) = self.args.get(key) {
-                return value.clone();
+            let v = self.args.get(key);
+            if v.is_some() {
+                return v.cloned();
             }
         }
-        String::new()
+        None
     }
 }
 
-pub trait ParseArgs {
-    fn parse(self) -> ParsedArgs;
-}
+sealed!(
+    pub trait ParseArgs {
+        fn parse(self) -> ParsedArgs;
+    }
+);
 
 impl ParseArgs for Args {
     fn parse(self) -> ParsedArgs {
@@ -60,3 +61,5 @@ impl ParseArgs for Args {
         }
     }
 }
+
+seal!(Args);

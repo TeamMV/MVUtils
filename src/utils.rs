@@ -1,11 +1,7 @@
-use alloc::ffi::CString;
-use alloc::rc::Rc;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
-use crate::*;
+use std::ops::{Deref, DerefMut, Div, Mul};
 use std::time::*;
+use num_traits::Num;
 
 pub trait Plural {
     fn plural(&self, count: u32) -> Self;
@@ -28,72 +24,52 @@ impl Plural for String {
     }
 }
 
-pub trait XTraIMath {
-    fn overlap(self, min: Self, max: Self) -> Self;
-}
-
-pub trait XTraFMath {
+pub trait ExtraFMath {
     fn percentage(self, total: Self) -> Self;
     fn value(self, total: Self) -> Self;
 }
 
-pub trait XTraMath {
+pub trait Square {
     fn square(self) -> Self;
 }
 
-impl_xtraimath!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
-impl_xtrafmath!(f32, f64);
-impl_xtramath!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64);
-
-#[macro_export]
-macro_rules! impl_xtraimath {
-    ($($t:ty),*) => {
-        $(
-            impl XTraIMath for $t {
-                fn overlap(self, min: $t, max: $t) -> $t {
-                    if self > max {
-                        return min + (self - max - 1) % (max - min + 1);
-                    }
-                    else if self < min {
-                        return max - (min - self - 1) % (max - min + 1);
-                    }
-                    else {
-                        self
-                    }
-                }
-            }
-        )*
-    };
+impl<T: Mul<T, Output = T> + Copy> Square for T {
+    fn square(self) -> Self {
+        self * self
+    }
 }
 
-#[macro_export]
-macro_rules! impl_xtrafmath {
-    ($($t:ty),*) => {
-        $(
-            impl XTraFMath for $t {
-                fn percentage(self, total: $t) -> $t {
-                    self / total * 100.0
-                }
-
-                fn value(self, total: $t) -> $t {
-                    self / 100.0 * total
-                }
-            }
-        )*
-    };
+pub trait Overlap {
+    fn overlap(self, min: Self, max: Self) -> Self;
 }
 
-#[macro_export]
-macro_rules! impl_xtramath {
-    ($($t:ty),*) => {
-        $(
-            impl XTraMath for $t {
-                fn square(self) -> $t {
-                    self * self
-                }
-            }
-        )*
-    };
+impl<T: Num + Ord + Copy> Overlap for T {
+    fn overlap(self, min: T, max: T) -> Self {
+        if self > max {
+            return min + (self - max - T::one()) % (max - min + T::one());
+        }
+        else if self < min {
+            return max - (min - self - T::one()) % (max - min + T::one());
+        }
+        else {
+            self
+        }
+    }
+}
+
+pub trait Percentage {
+    fn percentage(self, total: Self) -> Self;
+    fn value(self, total: Self) -> Self;
+}
+
+impl<T: From<f32> + Div<T, Output = T> + Mul<T, Output = T> + Copy> Percentage for T {
+    fn percentage(self, total: Self) -> Self {
+        self / total * 100.0.into()
+    }
+
+    fn value(self, total: Self) -> Self {
+        self / 100.0.into() * total
+    }
 }
 
 pub trait TetrahedronOp {
@@ -199,22 +175,6 @@ impl<T> SplitInto for Vec<T> {
     }
 }
 
-pub trait AsCStr {
-    fn as_c_str(&self) -> CString;
-}
-
-impl AsCStr for str {
-    fn as_c_str(&self) -> CString {
-        CString::new(self.to_string()).expect("Illegal CString format!")
-    }
-}
-
-impl AsCStr for String {
-    fn as_c_str(&self) -> CString {
-        CString::new(self.clone()).expect("Illegal CString format!")
-    }
-}
-
 pub trait Time {
     fn time_millis() -> Self;
     fn time_nanos() -> Self;
@@ -236,23 +196,15 @@ pub trait IncDec {
     fn dec(self) -> Self;
 }
 
-macro_rules! impl_incr {
-    ($($typ:ty),*) => {
-        $(
-            impl IncDec for $typ {
-                fn inc(self) -> Self {
-                    self + 1 as $typ
-                }
+impl<T: Num + Copy> IncDec for T {
+    fn inc(self) -> Self {
+        self + T::one()
+    }
 
-                fn dec(self) -> Self {
-                    self - 1 as $typ
-                }
-            }
-        )*
-    };
+    fn dec(self) -> Self {
+        self - T::one()
+    }
 }
-
-impl_incr!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64);
 
 #[macro_export]
 macro_rules ! init_arr {
@@ -281,19 +233,7 @@ impl SplitSized for String {
     }
 }
 
-#[macro_export]
-macro_rules! deref {
-    ($e:expr) => {
-        unsafe {*$e}
-    };
-}
-
-pub type RcMut<T> = Rc<RefCell<T>>;
 pub type Bytecode = Vec<u8>;
-
-pub fn rc_mut<T>(t: T) -> RcMut<T> {
-    Rc::new(RefCell::new(t))
-}
 
 pub trait Verify {
     fn verify(&self) -> bool;
@@ -304,8 +244,8 @@ pub trait Verify {
     }
 
     fn verify_or_panic_default(&self) {
-        if!self.verify() {
-            panic!("Illegal state, value cannot be verified!");
+        if !self.verify() {
+            panic!("Illegal state, value verification returned false!");
         }
     }
 }
@@ -408,13 +348,6 @@ struct L<T, F = fn() -> T> {
 }
 
 impl<T, F: FnOnce() -> T> L<T, F> {
-    fn new(gen: F) -> Self {
-        L {
-            val: None,
-            gen: Some(gen)
-        }
-    }
-
     fn force(&mut self) -> &mut T {
         if let Some(ref mut val) = self.val {
             val
@@ -444,17 +377,17 @@ impl<T, F: FnOnce() -> T> DerefMut for L<T, F> {
     }
 }
 
-static mut ids: L<HashMap<String, u64>> = L { val: None, gen: Some(HashMap::new) };
+static mut IDS: L<HashMap<String, u64>> = L { val: None, gen: Some(HashMap::new) };
 
 pub fn next_id(key: &str) -> u64 {
     unsafe {
-        if ids.contains_key(key) {
-            let id = ids.get_mut(key).unwrap();
+        if IDS.contains_key(key) {
+            let id = IDS.get_mut(key).unwrap();
             *id += 1;
             id.clone()
         }
         else {
-            ids.insert(key.to_string(), 0);
+            IDS.insert(key.to_string(), 0);
             0
         }
     }

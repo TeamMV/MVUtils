@@ -1,6 +1,6 @@
 use bytebuffer::ByteBuffer;
 
-pub trait Serializer {
+pub trait Saver {
     fn push_bytes(&mut self, bytes: &[u8]);
     fn push_u8(&mut self, value: u8);
     fn push_u16(&mut self, value: u16);
@@ -15,7 +15,7 @@ pub trait Serializer {
     fn push_string(&mut self, value: &str);
 }
 
-pub trait Deserializer {
+pub trait Loader {
     fn pop_bytes(&mut self, amount: usize) -> Option<Vec<u8>>;
     fn pop_bytes_unchecked(&mut self, amount: usize) -> Vec<u8> {
         self.pop_bytes(amount).unwrap()
@@ -66,7 +66,7 @@ pub trait Deserializer {
     }
 }
 
-impl Serializer for ByteBuffer {
+impl Saver for ByteBuffer {
     fn push_bytes(&mut self, bytes: &[u8]) {
         self.write_bytes(bytes);
     }
@@ -116,7 +116,7 @@ impl Serializer for ByteBuffer {
     }
 }
 
-impl Deserializer for ByteBuffer {
+impl Loader for ByteBuffer {
     fn pop_bytes(&mut self, amount: usize) -> Option<Vec<u8>> {
         self.read_bytes(amount).ok()
     }
@@ -166,7 +166,7 @@ impl Deserializer for ByteBuffer {
     }
 }
 
-pub trait Serializable: Sized {
-    fn serialize(&self, serializer: &mut impl Serializer);
-    fn deserialize(deserializer: &mut impl Deserializer) -> Result<Self, String>;
+pub trait Savable: Sized {
+    fn serialize(&self, serializer: &mut impl Saver);
+    fn deserialize(deserializer: &mut impl Loader) -> Result<Self, String>;
 }
