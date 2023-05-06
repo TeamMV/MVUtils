@@ -46,10 +46,10 @@ pub trait Overlap {
 impl<T: Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + One + Ord + Copy> Overlap for T {
     fn overlap(self, min: T, max: T) -> Self {
         if self > max {
-            return min + (self - max - T::one()) % (max - min + T::one());
+            min + (self - max - T::one()) % (max - min + T::one())
         }
         else if self < min {
-            return max - (min - self - T::one()) % (max - min + T::one());
+            max - (min - self - T::one()) % (max - min + T::one())
         }
         else {
             self
@@ -160,18 +160,18 @@ impl<T> SplitInto for Vec<T> {
         let mut extra = self.len() % n;
         self.reverse();
 
-        for i in 0..n {
+        for part in parts.iter_mut() {
             let mut length = split_data_length;
             if extra > 0 {
                 length += 1;
                 extra -= 1;
             }
             for _ in 0..length {
-                parts[i].push(self.pop().unwrap())
+                part.push(self.pop().unwrap())
             }
         }
 
-        return parts;
+        parts
     }
 }
 
@@ -384,7 +384,7 @@ pub fn next_id(key: &str) -> u64 {
         if IDS.contains_key(key) {
             let id = IDS.get_mut(key).unwrap();
             *id += 1;
-            id.clone()
+            *id
         }
         else {
             IDS.insert(key.to_string(), 0);

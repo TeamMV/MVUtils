@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -19,14 +19,6 @@ impl Version {
         }
     }
 
-    pub fn default() -> Self {
-        Version {
-            major: 1,
-            minor: 0,
-            patch: 0,
-        }
-    }
-
     pub fn parse_vulkan(version: u32) -> Self {
         Version {
             major: (version >> 22) as u16,
@@ -39,17 +31,16 @@ impl Version {
         if version.is_empty() {
             return None;
         }
-        let digits: Vec<u16>;
-        if version.starts_with("#version") {
-            digits = version.replace("#version", "").replace(" ", "").chars().map(|c| c as u16 - 48).collect::<Vec<_>>();
+        let digits = if version.starts_with("#version") {
+            version.replace("#version", "").replace(' ', "").chars().map(|c| c as u16 - 48).collect::<Vec<_>>()
         }
         else {
-            let results = version.replace("v", "").replace(" ", "").split(".").map(u16::from_str).collect::<Vec<_>>();
+            let results = version.replace(['v', ' '], "").split('.').map(u16::from_str).collect::<Vec<_>>();
             if results.iter().any(Result::is_err) {
                 return None;
             }
-            digits = results.into_iter().map(|e| e.unwrap()).collect::<Vec<_>>();
-        }
+            results.into_iter().map(|e| e.unwrap()).collect::<Vec<_>>()
+        };
 
         if digits.len() == 1 {
             Some(Version {
@@ -110,9 +101,25 @@ impl Version {
     }
 }
 
+impl Default for Version {
+    fn default() -> Self {
+        Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+        }
+    }
+}
+
 impl Display for Version {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("{}.{}.{}", self.major, self.minor, self.patch).as_str())
+    }
+}
+
+impl Debug for Version {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(format!("Version {{ major: {}, minor: {}, patch: {} }}", self.major, self.minor, self.patch).as_str())
     }
 }
 
