@@ -392,3 +392,83 @@ pub fn next_id(key: &str) -> u64 {
         }
     }
 }
+
+#[macro_export]
+macro_rules! id_eq {
+    ($($t:ty $([$($g:ident$(:$($dep:ident),*)?),*])?),*) => {
+        $(
+            impl$(<$($g$(:$($dep+)*)?),*>)? PartialEq for $t {
+                fn eq(&self, other: &$t) -> bool {
+                    self.id == other.id
+                }
+            }
+
+            impl$(<$($g$(:$($dep+)*)?),*>)? Eq for $t {}
+        )*
+    };
+}
+
+#[macro_export]
+macro_rules! id {
+    (
+        $(#[$outer:meta])*
+        $vis:vis struct $name:ident {
+            $(
+                $(#[$inner:meta])*
+                $v:vis $n:ident: $t:ty
+            ),*
+        }
+    ) => {
+        $($outer)*
+        $vis struct $name {
+            id: u64,
+            $(
+                $(#[$inner])*
+                $v $n: $t
+            ),*
+        }
+
+        id_eq!($name);
+    };
+
+    (
+        $(#[$outer:meta])*
+        $vis:vis struct $name:ident<$($g:ident$(:$($dep:ident),*)?),*> {
+            $(
+                $(#[$inner:meta])*
+                $v:vis $n:ident: $t:ty
+            ),*
+        }
+    ) => {
+        $($outer)*
+        $vis struct $name<$($g$(:$($dep+)*)?),*> {
+            id: u64,
+            $(
+                $(#[$inner])*
+                $v $n: $t
+            ),*
+        }
+
+        id_eq!($name<$($g),*>[$($g$(:$($dep),*)?),*]);
+    }
+}
+
+#[macro_export]
+macro_rules! attach_id {
+    (
+        $name:ident {
+            $(
+                $(#[$outer:meta])*
+                $n:ident$(: $t:expr)?
+            ),*
+        }
+    ) => {
+        $name {
+            id: mvutils::utils::next_id(stringify!($name)),
+            $(
+                $(#[$outer])*
+                $n$(: $t)?
+            ),*
+        }
+    };
+}
