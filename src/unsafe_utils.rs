@@ -15,6 +15,12 @@ impl<T> UnsafeRef<T> {
         }
     }
 
+    pub unsafe fn null() -> Self {
+        Self {
+            ptr: std::ptr::null_mut(),
+        }
+    }
+
     pub fn is_valid(&self) -> bool {
         unsafe {
             (self.ptr as *const T).as_ref().is_some()
