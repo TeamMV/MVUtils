@@ -1,3 +1,4 @@
+use std::alloc::Layout;
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
@@ -77,5 +78,60 @@ impl<T: Display> Display for UnsafeRef<T> {
 impl<T: Debug> Debug for UnsafeRef<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.deref().fmt(f)
+    }
+}
+
+pub struct Nullable<T> {
+    ptr: *mut T
+}
+
+impl<T> Nullable<T> {
+    pub fn new(value: T) -> Nullable<T> {
+        unsafe {
+            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+            ptr.write(value);
+            Nullable {
+                ptr
+            }
+        }
+    }
+
+    pub fn null() -> Nullable<T> {
+        Nullable {
+            ptr: std::ptr::null_mut()
+        }
+    }
+
+    pub fn zeroed() -> Nullable<T> {
+        unsafe {
+            Nullable {
+                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T
+            }
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.ptr.is_null()
+    }
+}
+
+impl<T> Deref for Nullable<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        unsafe { self.ptr.as_ref().expect("Null pointer dereference! Check using Nullable::is_null() before dereferencing!") }
+    }
+}
+
+impl<T> DerefMut for Nullable<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe { self.ptr.as_mut().expect("Null pointer dereference! Check using Nullable::is_null() before dereferencing!") }
+    }
+}
+
+impl<T> Drop for Nullable<T> {
+    fn drop(&mut self) {
+        unsafe {
+            std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+        }
     }
 }
