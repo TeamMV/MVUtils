@@ -9,7 +9,7 @@ pub union UnsafeRef<T> {
 }
 
 impl<T> UnsafeRef<T> {
-    pub unsafe fn new(data: &T) -> Self {
+    pub fn new(data: &T) -> Self {
         Self {
             ptr: data as *const T as *mut c_void,
         }
@@ -25,6 +25,18 @@ impl<T> UnsafeRef<T> {
         unsafe {
             (self.ptr as *const T).as_ref().is_some()
         }
+    }
+
+    pub unsafe fn cast_bytes<R>(&self) -> UnsafeRef<R> {
+        UnsafeRef {
+            ptr: self.ptr,
+        }
+    }
+}
+
+impl<T> From<&T> for UnsafeRef<T> {
+    fn from(value: &T) -> Self {
+        UnsafeRef::new(value)
     }
 }
 
