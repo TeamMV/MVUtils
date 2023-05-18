@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::env::Args;
 use std::ops::Index;
-use std::option::Iter;
 use crate::sealable;
 
 sealable!();

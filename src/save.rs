@@ -170,3 +170,42 @@ pub trait Savable: Sized {
     fn save(&self, saver: &mut impl Saver);
     fn load(loader: &mut impl Loader) -> Result<Self, String>;
 }
+
+macro_rules! impl_savable_primitive {
+    ($($t:ty, $pu:ident, $po:ident),*) => {
+        $(
+            impl Savable for $t {
+                fn save(&self, saver: &mut impl Saver) {
+                    saver.$pu(*self)
+                }
+
+                fn load(loader: &mut impl Loader) -> Result<Self, String> {
+                    loader.$po().ok_or(format!("Failed to load {} from Loader!", stringify!($t)))
+                }
+            }
+        )*
+    };
+}
+
+impl_savable_primitive!(
+    u8, push_u8, pop_u8,
+    u16, push_u16, pop_u16,
+    u32, push_u32, pop_u32,
+    u64, push_u64, pop_u64,
+    i8, push_i8, pop_i8,
+    i16, push_i16, pop_i16,
+    i32, push_i32, pop_i32,
+    i64, push_i64, pop_i64,
+    f32, push_f32, pop_f32,
+    f64, push_f64, pop_f64
+);
+
+impl Savable for String {
+    fn save(&self, saver: &mut impl Saver) {
+        saver.push_string(self);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        loader.pop_string().ok_or("Failed to load String from Loader!".to_string())
+    }
+}
