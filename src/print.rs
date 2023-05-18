@@ -61,7 +61,7 @@ impl Printer {
         let f = self.last_fmt;
         let c = self.last_col;
         let g = self.last_bg;
-        self.text(text).def().ln().fmt(f).col(c).bg(g)
+        self.text(text).def().ln().col(c).bg(g).fmt(f)
     }
 
     pub fn ln(mut self) -> Self {
@@ -85,7 +85,6 @@ impl Printer {
     }
 
     pub fn def(mut self) -> Self {
-        self.last_fmt = Fmt::Default;
         self.fmt(Fmt::Default)
     }
 
@@ -135,10 +134,67 @@ impl Printer {
         self
     }
 
+    pub fn revert_styles(mut self, fmt: Fmt, col: Col, bg: Col) -> Self {
+        self.col(col).bg(bg).fmt(fmt)
+    }
+
+    pub fn fmt_for(mut self, fmt: Fmt, text: &str) -> Self {
+        let f = self.last_fmt;
+        let c = self.last_col;
+        let b = self.last_bg;
+        self.fmt(fmt)
+            .text(text)
+            .revert_styles(f, c, b)
+    }
+
+    pub fn fmt_forln(mut self, fmt: Fmt, text: &str) -> Self {
+        self.fmt_for(fmt, text).ln()
+    }
+
+    pub fn col_for(mut self, col: Col, text: &str) -> Self {
+        let f = self.last_fmt;
+        let c = self.last_col;
+        let b = self.last_bg;
+        self.col(col)
+            .text(text)
+            .revert_styles(f, c, b)
+    }
+
+    pub fn col_forln(mut self, col: Col, text: &str) -> Self {
+        self.col_for(col, text).ln()
+    }
+
+    pub fn bg_for(mut self, col: Col, text: &str) -> Self {
+        let f = self.last_fmt;
+        let c = self.last_col;
+        let b = self.last_bg;
+        self.bg(col)
+            .text(text)
+            .revert_styles(f, c, b)
+    }
+
+    pub fn bg_forln(mut self, col: Col, text: &str) -> Self {
+        self.bg_for(col, text).ln()
+    }
+
+    pub fn all_for(mut self, fmt: Fmt, col: Col, bg: Col, text: &str) -> Self {
+        let f = self.last_fmt;
+        let c = self.last_col;
+        let b = self.last_bg;
+        self.col(col)
+            .bg(bg)
+            .fmt(fmt)
+            .text(text)
+            .revert_styles(f, c, b)
+    }
+
+    pub fn all_forln(mut self, fmt: Fmt, col: Col, bg: Col, text: &str) -> Self {
+        self.all_for(fmt, col, bg, text).ln()
+    }
+
     pub fn flush(mut self) {
         print!("{}", self.def().s);
         std::io::stdout().flush();
-        print!(" ");
     }
 }
 

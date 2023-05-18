@@ -471,3 +471,77 @@ macro_rules! attach_id {
         }
     };
 }
+
+pub fn remove_quotes(input: &str) -> String {
+    let mut output = String::new();
+    let mut in_quotes = false;
+    let mut prev_char = '\0';
+
+    for c in input.chars() {
+        match c {
+            '"' if prev_char != '\\' => {
+                in_quotes = !in_quotes;
+                continue;
+            }
+            ' ' if in_quotes => {
+                output.push_str("\\s");
+                prev_char = c;
+                continue;
+            }
+            _ => {}
+        }
+
+        if !(prev_char == '\\' && c == '"') {
+            output.push(c);
+        }
+        prev_char = c;
+    }
+
+    output
+}
+
+pub fn format_escaped(input: &str) -> String {
+    let mut output = String::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.peek() {
+                Some('f') => {
+                    output.push('\x0C');
+                }
+                Some('b') => {
+                    output.push('\x08');
+                }
+                Some('s') => {
+                    output.push(' ');
+                }
+                Some('r') => {
+                    output.push('\r');
+                }
+                Some('n') => {
+                    output.push('\n');
+                }
+                Some('t') => {
+                    output.push('\t');
+                }
+                Some('0') => {
+                    output.push('\0');
+                }
+                Some('\\') => {
+                    output.push('\\');
+                }
+                Some(c) => {
+                    output.push(*c);
+                }
+                None => {
+                    panic!("Character after escape sequence not found!");
+                }
+            }
+            chars.next();
+        } else {
+            output.push(c);
+        }
+    }
+    output
+}
