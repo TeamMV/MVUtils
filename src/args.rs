@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::env::Args;
 use std::ops::Index;
+use std::option::Iter;
 use crate::sealable;
 
 sealable!();
@@ -67,6 +68,7 @@ impl ParseArgs for Args {
         let mut command = None;
         let mut key: Option<String> = None;
         let mut in_args = false;
+
         for (i, arg) in self.skip(1).enumerate() {
             if in_args {
                 args.push(arg);

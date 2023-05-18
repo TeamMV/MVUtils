@@ -167,6 +167,6 @@ impl Loader for ByteBuffer {
 }
 
 pub trait Savable: Sized {
-    fn serialize(&self, serializer: &mut impl Saver);
-    fn deserialize(deserializer: &mut impl Loader) -> Result<Self, String>;
+    fn save(&self, saver: &mut impl Saver);
+    fn load(loader: &mut impl Loader) -> Result<Self, String>;
 }

@@ -70,7 +70,7 @@ impl<T> Clone for UnsafeRef<T> {
 }
 
 impl<T: Display> Display for UnsafeRef<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         self.deref().fmt(f)
     }
 }
@@ -81,6 +81,7 @@ impl<T: Debug> Debug for UnsafeRef<T> {
     }
 }
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Nullable<T> {
     ptr: *mut T
 }
@@ -113,6 +114,12 @@ impl<T> Nullable<T> {
     pub fn is_null(&self) -> bool {
         self.ptr.is_null()
     }
+
+    pub fn extract(self) -> T {
+        unsafe {
+            std::ptr::read(self.ptr)
+        }
+    }
 }
 
 impl<T> Deref for Nullable<T> {
@@ -132,6 +139,122 @@ impl<T> Drop for Nullable<T> {
     fn drop(&mut self) {
         unsafe {
             std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+        }
+    }
+}
+
+impl<T: Display> Display for Nullable<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_null() {
+            f.write_str("null")
+        }
+        else {
+            self.deref().fmt(f)
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug)]
+pub struct NullableRc<T> {
+    ptr: *const T,
+    ref_count: *mut usize,
+}
+
+impl<T> NullableRc<T> {
+    pub fn new(value: T) -> NullableRc<T> {
+        unsafe {
+            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+            ptr.write(value);
+            let ptr = ptr as *const T;
+            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
+            ref_count.write(1);
+            NullableRc {
+                ptr,
+                ref_count,
+            }
+        }
+    }
+
+    pub fn null() -> NullableRc<T> {
+        unsafe {
+            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
+            ref_count.write(1);
+            NullableRc {
+                ptr: std::ptr::null_mut(),
+                ref_count,
+            }
+        }
+    }
+
+    pub fn zeroed() -> NullableRc<T> {
+        unsafe {
+            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
+            ref_count.write(1);
+            NullableRc {
+                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *const T,
+                ref_count,
+            }
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.ptr.is_null()
+    }
+
+    pub fn ref_count(&self) -> usize {
+        unsafe { *self.ref_count }
+    }
+
+    pub fn extract(self) -> T {
+        if self.ref_count() > 1 {
+            panic!("Cannot extract a NullableRc with more than one living reference!");
+        }
+        unsafe {
+            std::ptr::read(self.ptr)
+        }
+    }
+}
+
+impl<T> Deref for NullableRc<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        unsafe { self.ptr.as_ref().expect("Null pointer dereference! Check using Nullable::is_null() before dereferencing!") }
+    }
+}
+
+impl<T> Clone for NullableRc<T> {
+    fn clone(&self) -> NullableRc<T> {
+        unsafe {
+            *self.ref_count += 1;
+            NullableRc {
+                ptr: self.ptr,
+                ref_count: self.ref_count,
+            }
+        }
+    }
+}
+
+impl<T> Drop for NullableRc<T> {
+    fn drop(&mut self) {
+        unsafe {
+            if *self.ref_count == 1 {
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+                std::alloc::dealloc(self.ref_count as *mut u8, Layout::new::<usize>());
+            }
+            else {
+                *self.ref_count -= 1;
+            }
+        }
+    }
+}
+
+impl<T: Display> Display for NullableRc<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_null() {
+            f.write_str("null")
+        }
+        else {
+            self.deref().fmt(f)
         }
     }
 }

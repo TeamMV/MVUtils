@@ -190,9 +190,8 @@ impl Time for u128 {
     }
 }
 
-
 pub trait IncDec {
-    fn inc(self)  -> Self;
+    fn inc(self) -> Self;
     fn dec(self) -> Self;
 }
 
