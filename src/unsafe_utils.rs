@@ -47,6 +47,10 @@ impl<T> UnsafeRef<T> {
             phantom: PhantomData
         }
     }
+
+    pub fn same_as(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
 }
 
 impl<T> From<&T> for UnsafeRef<T> {
@@ -94,7 +98,19 @@ impl<T: Debug> Debug for UnsafeRef<T> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug)]
+impl<T: PartialEq> PartialEq for UnsafeRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
+    }
+}
+
+impl<T: Eq> Eq for UnsafeRef<T> {
+    fn assert_receiver_is_total_eq(&self) -> () {
+        self.deref().assert_receiver_is_total_eq()
+    }
+}
+
+#[derive(Debug)]
 pub struct Nullable<T> {
     ptr: *mut T
 }
@@ -133,6 +149,15 @@ impl<T> Nullable<T> {
             std::ptr::read(self.ptr)
         }
     }
+
+    /// Leaks the [`Nullable<T>`], returning the pointer to the heap allocated value.
+    ///
+    /// # Safety
+    ///
+    /// This will return a null pointer if the [`Nullable<T>`] is null.
+    pub unsafe fn leak(self) -> *mut T {
+        self.ptr
+    }
 }
 
 impl<T> Deref for Nullable<T> {
@@ -167,7 +192,29 @@ impl<T: Display> Display for Nullable<T> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug)]
+impl<T: PartialEq> PartialEq for Nullable<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.is_null() {
+            other.is_null()
+        }
+        else if other.is_null() {
+            false
+        }
+        else {
+            self.deref() == other.deref()
+        }
+    }
+}
+
+impl<T: Eq> Eq for Nullable<T> {
+    fn assert_receiver_is_total_eq(&self) -> () {
+        if !self.is_null() {
+            self.deref().assert_receiver_is_total_eq()
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct NullableRc<T> {
     ptr: *const T,
     ref_count: *mut usize,
@@ -208,6 +255,10 @@ impl<T> NullableRc<T> {
                 ref_count,
             }
         }
+    }
+
+    pub fn same_as(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
     }
 
     pub fn is_null(&self) -> bool {
@@ -268,6 +319,28 @@ impl<T: Display> Display for NullableRc<T> {
         }
         else {
             self.deref().fmt(f)
+        }
+    }
+}
+
+impl<T: PartialEq> PartialEq for NullableRc<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.is_null() {
+            other.is_null()
+        }
+        else if other.is_null() {
+            false
+        }
+        else {
+            self.deref() == other.deref()
+        }
+    }
+}
+
+impl<T: Eq> Eq for NullableRc<T> {
+    fn assert_receiver_is_total_eq(&self) -> () {
+        if !self.is_null() {
+            self.deref().assert_receiver_is_total_eq()
         }
     }
 }
