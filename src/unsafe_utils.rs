@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-pub union UnsafeRef<T> {
+pub struct UnsafeRef<T> {
     ptr: *mut c_void,
     phantom: PhantomData<T>,
 }
@@ -13,24 +13,38 @@ impl<T> UnsafeRef<T> {
     pub fn new(data: &T) -> Self {
         Self {
             ptr: data as *const T as *mut c_void,
+            phantom: PhantomData
         }
     }
 
+    /// Initialize an [`UnsafeRef<T>`] as null.
+    ///
+    /// # Safety
+    ///
+    /// This function sets the value to null. It is up to the user to check whether the pointer is
+    /// null using [`UnsafeRef::is_valid`] before calling functions on the dereferenced value.
     pub unsafe fn null() -> Self {
         Self {
             ptr: std::ptr::null_mut(),
+            phantom: PhantomData
         }
     }
 
     pub fn is_valid(&self) -> bool {
-        unsafe {
-            (self.ptr as *const T).as_ref().is_some()
-        }
+        !self.ptr.is_null()
     }
 
+    /// Reinterpret the value at this pointer as another type. This does not cast, it just assumes
+    /// the bytes at the pointer are the same type and same length and alignment.
+    ///
+    /// # Safety
+    ///
+    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
+    /// and [`R`] have the same size and alignment.
     pub unsafe fn cast_bytes<R>(&self) -> UnsafeRef<R> {
         UnsafeRef {
             ptr: self.ptr,
+            phantom: PhantomData
         }
     }
 }
@@ -61,10 +75,9 @@ impl<T> DerefMut for UnsafeRef<T> {
 
 impl<T> Clone for UnsafeRef<T> {
     fn clone(&self) -> Self {
-        unsafe {
-            Self {
-                ptr: self.ptr
-            }
+        Self {
+            ptr: self.ptr,
+            phantom: PhantomData
         }
     }
 }
@@ -257,4 +270,32 @@ impl<T: Display> Display for NullableRc<T> {
             self.deref().fmt(f)
         }
     }
+}
+
+#[macro_export]
+macro_rules! unsafe_cast {
+    ($val:ident, $to:ty) => {
+        unsafe { (($val as *const _) as *const $to).as_ref().unwrap() }
+    };
+}
+
+#[macro_export]
+macro_rules! unsafe_cast_mut {
+    ($val:ident, $to:ty) => {
+        unsafe { (($val as *const _) as *const $to).cast_mut().as_mut().unwrap() }
+    };
+}
+
+#[macro_export]
+macro_rules! unsafe_multi_borrow {
+    ($val:ident, $t:ty) => {
+        unsafe { (&$val as *const $t).as_ref().unwrap() }
+    };
+}
+
+#[macro_export]
+macro_rules! unsafe_multi_borrow_mut {
+    ($val:ident, $t:ty) => {
+        unsafe { (&mut $val as *mut $t).as_mut().unwrap() }
+    };
 }

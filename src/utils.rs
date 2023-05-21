@@ -326,13 +326,6 @@ macro_rules! sealable {
 }
 
 #[macro_export]
-macro_rules! unsafe_cast {
-    ($val:ident, $to:ty) => {
-        unsafe { (($val as *const _) as *const $to).as_ref().unwrap() }
-    };
-}
-
-#[macro_export]
 macro_rules! swap {
     ($a:ident, $b:ident) => {
         let tmp = $a;
@@ -473,6 +466,7 @@ macro_rules! attach_id {
 }
 
 pub fn remove_quotes(input: &str) -> String {
+    let input = input.replace("' '", "'\\s'");
     let mut output = String::new();
     let mut in_quotes = false;
     let mut prev_char = '\0';
