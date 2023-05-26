@@ -404,7 +404,7 @@ impl Unsafe {
         (value as *mut T).as_mut().unwrap()
     }
 
-    pub fn leak<T>(value: T) -> &T {
+    pub fn leak<T>(value: T) -> &'static T {
         unsafe {
             let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
             ptr.write(value);
@@ -412,10 +412,24 @@ impl Unsafe {
         }
     }
 
-    pub fn leak_mut<T>(value: T) -> &mut T {
+    pub fn leak_mut<T>(value: T) -> &'static mut T {
         unsafe {
             let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
             ptr.write(value);
+            ptr.as_mut().unwrap()
+        }
+    }
+
+    pub fn leak_zeroed<T>() -> &'static T {
+        unsafe {
+            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *const T;
+            ptr.as_ref().unwrap()
+        }
+    }
+
+    pub fn leak_zeroed_mut<T>() -> &'static mut T {
+        unsafe {
+            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
             ptr.as_mut().unwrap()
         }
     }
