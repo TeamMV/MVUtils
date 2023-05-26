@@ -403,6 +403,22 @@ impl Unsafe {
     pub unsafe fn cast_mut_static<T>(value: &mut T) -> &'static mut T {
         (value as *mut T).as_mut().unwrap()
     }
+
+    pub fn leak<T>(value: T) -> &T {
+        unsafe {
+            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+            ptr.write(value);
+            ptr.as_ref().unwrap()
+        }
+    }
+
+    pub fn leak_mut<T>(value: T) -> &mut T {
+        unsafe {
+            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+            ptr.write(value);
+            ptr.as_mut().unwrap()
+        }
+    }
 }
 
 #[macro_export]
