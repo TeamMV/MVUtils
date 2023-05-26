@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ops::{Add, Deref, DerefMut, Div, Mul, Rem, Sub};
+use std::ops::Range;
 use std::time::*;
 use num_traits::One;
 
@@ -54,6 +55,17 @@ impl<T: Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + One + Ord
         else {
             self
         }
+    }
+}
+
+pub trait Map<T> {
+    fn map(self, original: &Range<T>, target: &Range<T>) -> T;
+}
+
+impl<T: Add<T, Output = T> + Sub<T, Output = T> + Mul<T, Output = T> + Div<T, Output = T> + PartialOrd> Map<T> for T {
+    fn map(self, original: &Range<T>, target: &Range<T>) -> T {
+        if self < original.start || self > original.end { return self }
+        return ((self - original.start) * (target.end - target.start) / (original.end - original.start)) + target.start;
     }
 }
 
@@ -191,17 +203,19 @@ impl Time for u128 {
 }
 
 pub trait IncDec {
-    fn inc(self) -> Self;
-    fn dec(self) -> Self;
+    fn inc(&mut self) -> Self;
+    fn dec(&mut self) -> Self;
 }
 
-impl<T: Add<T, Output = T> + Sub<T, Output = T> + One + Copy> IncDec for T {
-    fn inc(self) -> Self {
-        self + T::one()
+impl<T: Add<T, Output = T> + Sub<T, Output = T> + AddAssign + SubAssign + One + Copy> IncDec for T {
+    fn inc(&mut self) -> Self {
+        *self += T::one();
+        *self
     }
 
-    fn dec(self) -> Self {
-        self - T::one()
+    fn dec(&mut self) -> Self {
+        *self -= T::one();
+        *self
     }
 }
 
