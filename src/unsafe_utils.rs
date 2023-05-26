@@ -397,11 +397,11 @@ impl Unsafe {
     }
 
     pub unsafe fn cast_static<T>(value: &T) -> &'static T {
-        Unsafe::cast_ref(value)
+        (value as *const T).as_ref().unwrap()
     }
 
     pub unsafe fn cast_mut_static<T>(value: &mut T) -> &'static mut T {
-        Unsafe::cast_mut(value)
+        (value as *mut T).as_mut().unwrap()
     }
 }
 
