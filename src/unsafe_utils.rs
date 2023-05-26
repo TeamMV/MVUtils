@@ -420,14 +420,14 @@ impl Unsafe {
         }
     }
 
-    pub fn leak_zeroed<T>() -> &'static T {
+    pub unsafe fn leak_zeroed<T>() -> &'static T {
         unsafe {
             let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *const T;
             ptr.as_ref().unwrap()
         }
     }
 
-    pub fn leak_zeroed_mut<T>() -> &'static mut T {
+    pub unsafe fn leak_zeroed_mut<T>() -> &'static mut T {
         unsafe {
             let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
             ptr.as_mut().unwrap()
