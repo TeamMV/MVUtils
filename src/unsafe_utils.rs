@@ -51,6 +51,14 @@ impl<T> UnsafeRef<T> {
     pub fn same_as(&self, other: &Self) -> bool {
         self.ptr == other.ptr
     }
+
+    pub unsafe fn as_static(&self) -> &'static T {
+        (self.ptr as *const T).as_ref().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
+    }
+
+    pub unsafe fn as_static_mut(&mut self) -> &'static T {
+        (self.ptr as *mut T).as_mut().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
+    }
 }
 
 impl<T> From<&T> for UnsafeRef<T> {
