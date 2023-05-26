@@ -158,6 +158,19 @@ impl<T> Nullable<T> {
     pub unsafe fn leak(self) -> *mut T {
         self.ptr
     }
+
+    /// Reinterpret the value at this pointer as another type. This does not cast, it just assumes
+    /// the bytes at the pointer are the same type and same length and alignment.
+    ///
+    /// # Safety
+    ///
+    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
+    /// and [`R`] have the same size and alignment.
+    pub unsafe fn cast_bytes<R>(self) -> Nullable<R> {
+        Nullable {
+            ptr: self.ptr as *mut R
+        }
+    }
 }
 
 impl<T> Deref for Nullable<T> {
@@ -275,6 +288,21 @@ impl<T> NullableRc<T> {
         }
         unsafe {
             std::ptr::read(self.ptr)
+        }
+    }
+
+    /// Reinterpret the value at this pointer as another type. This does not cast, it just assumes
+    /// the bytes at the pointer are the same type and same length and alignment.
+    ///
+    /// # Safety
+    ///
+    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
+    /// and [`R`] have the same size and alignment.
+    pub unsafe fn cast_bytes<R>(&self) -> NullableRc<R> {
+        *self.ref_count += 1;
+        NullableRc {
+            ptr: self.ptr as *mut R,
+            ref_count: self.ref_count,
         }
     }
 }
