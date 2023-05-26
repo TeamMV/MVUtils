@@ -381,6 +381,30 @@ impl<T: Eq> Eq for NullableRc<T> {
     }
 }
 
+pub struct Unsafe;
+
+impl Unsafe {
+    pub unsafe fn cast<T, R>(value: T) -> R {
+        std::ptr::read(&value as *const T as *mut R)
+    }
+
+    pub unsafe fn cast_ref<T, R>(value: &T) -> &R {
+        (value as *const T as *const R).as_ref().unwrap()
+    }
+
+    pub unsafe fn cast_mut<T, R>(value: &mut T) -> &mut R {
+        (value as *mut T as *mut R).as_mut().unwrap()
+    }
+
+    pub unsafe fn cast_static<T>(value: &T) -> &'static T {
+        Unsafe::cast_ref(value)
+    }
+
+    pub unsafe fn cast_mut_static<T>(value: &mut T) -> &'static mut T {
+        Unsafe::cast_mut(value)
+    }
+}
+
 #[macro_export]
 macro_rules! unsafe_cast {
     ($val:ident, $to:ty) => {

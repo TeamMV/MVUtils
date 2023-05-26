@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ops::{Add, Deref, DerefMut, Div, Mul, Rem, Sub};
+use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, Rem, Sub, SubAssign};
 use std::ops::Range;
 use std::time::*;
 use num_traits::One;
@@ -62,7 +62,7 @@ pub trait Map<T> {
     fn map(self, original: &Range<T>, target: &Range<T>) -> T;
 }
 
-impl<T: Add<T, Output = T> + Sub<T, Output = T> + Mul<T, Output = T> + Div<T, Output = T> + PartialOrd> Map<T> for T {
+impl<T: Add<T, Output = T> + Sub<T, Output = T> + Mul<T, Output = T> + Div<T, Output = T> + PartialOrd + Copy> Map<T> for T {
     fn map(self, original: &Range<T>, target: &Range<T>) -> T {
         if self < original.start || self > original.end { return self }
         return ((self - original.start) * (target.end - target.start) / (original.end - original.start)) + target.start;
