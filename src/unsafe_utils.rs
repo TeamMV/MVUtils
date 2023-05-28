@@ -448,7 +448,7 @@ pub struct UnsafeRc<T> {
     ref_count: *mut usize,
 }
 
-impl UnsafeRc<T> {
+impl<T> UnsafeRc<T> {
     pub fn new(value: T) -> UnsafeRc<T> {
         unsafe {
             let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
