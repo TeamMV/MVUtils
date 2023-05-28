@@ -3,6 +3,9 @@ use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct UnsafeRef<T> {
     ptr: *mut c_void,
@@ -383,13 +386,7 @@ impl<T: PartialEq> PartialEq for NullableRc<T> {
     }
 }
 
-impl<T: Eq> Eq for NullableRc<T> {
-    fn assert_receiver_is_total_eq(&self) -> () {
-        if !self.is_null() {
-            self.deref().assert_receiver_is_total_eq()
-        }
-    }
-}
+impl<T: Eq> Eq for NullableRc<T> {}
 
 pub struct Unsafe;
 
@@ -444,6 +441,179 @@ impl Unsafe {
         }
     }
 }
+
+pub struct UnsafeRc<T> {
+    ptr: *const T,
+    alloc: bool,
+    ref_count: *mut usize,
+}
+
+impl UnsafeRc<T> {
+    pub fn new(value: T) -> UnsafeRc<T> {
+        unsafe {
+            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+            ptr.write(value);
+            let ptr = ptr as *const T;
+            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
+            ref_count.write(1);
+            UnsafeRc {
+                ptr,
+                alloc: true,
+                ref_count,
+            }
+        }
+    }
+
+    pub fn from_ref(value: &T) -> UnsafeRc<T> {
+        unsafe {
+            let ptr = value as *const T;
+            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
+            ref_count.write(1);
+            UnsafeRc {
+                ptr,
+                alloc: false,
+                ref_count,
+            }
+        }
+    }
+}
+
+impl<T> Clone for UnsafeRc<T> {
+    fn clone(&self) -> Self {
+        unsafe {
+            *self.ref_count += 1;
+            UnsafeRc {
+                ptr: self.ptr,
+                alloc: self.alloc,
+                ref_count: self.ref_count,
+            }
+        }
+    }
+}
+
+impl<T> Drop for UnsafeRc<T> {
+    fn drop(&mut self) {
+        unsafe {
+            if *self.ref_count == 1 {
+                if self.alloc {
+                    std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+                }
+                std::alloc::dealloc(self.ref_count as *mut u8, Layout::new::<usize>());
+            }
+            else {
+                *self.ref_count -= 1;
+            }
+        }
+    }
+}
+
+impl<T> Deref for UnsafeRc<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        unsafe { self.ptr.as_ref().expect("Dereferencing a nulled UnsafeRc!") }
+    }
+}
+
+impl<T: Display> Display for UnsafeRc<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.deref().fmt(f)
+    }
+}
+
+impl<T: PartialEq> PartialEq for UnsafeRc<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
+    }
+}
+
+impl<T: Eq> Eq for UnsafeRc<T> {}
+
+pub struct UnsafeArc<T> {
+    ptr: *const T,
+    alloc: bool,
+    ref_count: Arc<AtomicUsize>,
+}
+
+impl<T> UnsafeArc<T> {
+    pub fn new(value: T) -> UnsafeArc<T> {
+        unsafe {
+            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+            ptr.write(value);
+            let ptr = ptr as *const T;
+            let ref_count = Arc::new(AtomicUsize::new(1));
+            UnsafeArc {
+                ptr,
+                alloc: true,
+                ref_count,
+            }
+        }
+    }
+
+    pub fn from_ref(value: &T) -> UnsafeArc<T> {
+        unsafe {
+            let ptr = value as *const T;
+            let ref_count = Arc::new(AtomicUsize::new(1));
+            UnsafeArc {
+                ptr,
+                alloc: false,
+                ref_count,
+            }
+        }
+    }
+}
+
+impl<T> Clone for UnsafeArc<T> {
+    fn clone(&self) -> Self {
+        unsafe {
+            self.ref_count.fetch_add(1, Ordering::Relaxed);
+            UnsafeArc {
+                ptr: self.ptr,
+                alloc: self.alloc,
+                ref_count: self.ref_count.clone(),
+            }
+        }
+    }
+}
+
+impl<T> Drop for UnsafeArc<T> {
+    fn drop(&mut self) {
+        unsafe {
+            if self.ref_count.load(Ordering::Relaxed) == 1 && self.alloc {
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+            }
+            else {
+                self.ref_count.fetch_sub(1, Ordering::Relaxed);
+            }
+        }
+    }
+}
+
+impl<T> Deref for UnsafeArc<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        unsafe { self.ptr.as_ref().expect("Dereferencing a nulled UnsafeArc!") }
+    }
+}
+
+impl<T: Display> Display for UnsafeArc<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.deref().fmt(f)
+    }
+}
+
+impl<T: PartialEq> PartialEq for UnsafeArc<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
+    }
+}
+
+impl<T: Eq> Eq for UnsafeArc<T> {}
+
+unsafe impl<T: Send> Send for UnsafeArc<T> {}
+
+unsafe impl<T: Sync> Sync for UnsafeArc<T> {}
 
 #[macro_export]
 macro_rules! unsafe_cast {
