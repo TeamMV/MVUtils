@@ -120,7 +120,8 @@ impl<T: Eq> Eq for UnsafeRef<T> {
 
 #[derive(Debug)]
 pub struct Nullable<T> {
-    ptr: *mut T
+    ptr: *mut T,
+    drop: bool
 }
 
 impl<T> Nullable<T> {
@@ -129,21 +130,24 @@ impl<T> Nullable<T> {
             let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
             ptr.write(value);
             Nullable {
-                ptr
+                ptr,
+                drop: true
             }
         }
     }
 
     pub fn null() -> Nullable<T> {
         Nullable {
-            ptr: std::ptr::null_mut()
+            ptr: std::ptr::null_mut(),
+            drop: true
         }
     }
 
     pub fn zeroed() -> Nullable<T> {
         unsafe {
             Nullable {
-                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T
+                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T,
+                drop: true
             }
         }
     }
@@ -175,8 +179,12 @@ impl<T> Nullable<T> {
     /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
     /// and [`R`] have the same size and alignment.
     pub unsafe fn cast_bytes<R>(self) -> Nullable<R> {
+        unsafe {
+            (&self as *const Self).cast_mut().as_mut().unwrap().drop = false;
+        }
         Nullable {
-            ptr: self.ptr as *mut R
+            ptr: self.ptr as *mut R,
+            drop: true
         }
     }
 }
@@ -197,7 +205,9 @@ impl<T> DerefMut for Nullable<T> {
 impl<T> Drop for Nullable<T> {
     fn drop(&mut self) {
         unsafe {
-            std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+            if self.drop && !self.ptr.is_null() {
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+            }
         }
     }
 }
