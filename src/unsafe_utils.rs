@@ -3,7 +3,6 @@ use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -551,27 +550,23 @@ impl<T> UnsafeArc<T> {
     }
 
     pub fn from_ref(value: &T) -> UnsafeArc<T> {
-        unsafe {
-            let ptr = value as *const T;
-            let ref_count = Arc::new(AtomicUsize::new(1));
-            UnsafeArc {
-                ptr,
-                alloc: false,
-                ref_count,
-            }
+        let ptr = value as *const T;
+        let ref_count = Arc::new(AtomicUsize::new(1));
+        UnsafeArc {
+            ptr,
+            alloc: false,
+            ref_count,
         }
     }
 }
 
 impl<T> Clone for UnsafeArc<T> {
     fn clone(&self) -> Self {
-        unsafe {
-            self.ref_count.fetch_add(1, Ordering::Relaxed);
-            UnsafeArc {
-                ptr: self.ptr,
-                alloc: self.alloc,
-                ref_count: self.ref_count.clone(),
-            }
+        self.ref_count.fetch_add(1, Ordering::Relaxed);
+        UnsafeArc {
+            ptr: self.ptr,
+            alloc: self.alloc,
+            ref_count: self.ref_count.clone(),
         }
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
-use std::ops::{Add, AddAssign, Deref, DerefMut, Div, Mul, Rem, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::ops::Range;
+use std::sync::{Arc, Mutex};
 use std::time::*;
 use num_traits::One;
 
@@ -274,23 +275,36 @@ macro_rules! inner_sealable {
 
         #[macro_export]
         macro_rules! seal {
-            ($d($d t:ty),*) => {
+            ($d($d t:ty$d([$d($d g:ident $d(:$d($d dep:ident),*)?),*])?),*) => {
                 $d(
-                    impl private::Sealed for $d t {}
+                    impl$d(<$d($d g$d(:$d($d dep+)*)?),*>)? private::Sealed for $d t {}
                 )*
             };
             (
                 $d(#[$d outer:meta])*
                 $d vis:vis struct $d name:ident {
                     $d($d inner:tt)*
-                }
+                }$d([$d($d g:ident $d(:$d($d dep:ident),*)?),*])?
             ) => {
                 $d(#[$d outer])*
                 $d vis struct $d name {
                     $d($d inner)*
                 }
 
-                impl private::Sealed for $d name {}
+                impl$d(<$d($d g$d(:$d($d dep+)*)?),*>)? private::Sealed for $d name {}
+            };
+            (
+                $d(#[$d outer:meta])*
+                $d vis:vis struct $d name:ident(
+                    $d($d inner:tt)*
+                )$d([$d($d g:ident $d(:$d($d dep:ident),*)?),*])?
+            ) => {
+                $d(#[$d outer])*
+                $d vis struct $d name(
+                    $d($d inner)*
+                )
+
+                impl$d(<$d($d g$d(:$d($d dep+)*)?),*>)? private::Sealed for $d name {}
             };
             (
                 $d(#[$d outer:meta])*
@@ -348,55 +362,36 @@ macro_rules! swap {
     };
 }
 
-struct L<T, F = fn() -> T> {
-    val: Option<T>,
-    gen: Option<F>
+struct L<T> {
+    val: Mutex<Option<Arc<Mutex<T>>>>,
 }
 
-impl<T, F: FnOnce() -> T> L<T, F> {
-    fn force(&mut self) -> &mut T {
-        if let Some(ref mut val) = self.val {
-            val
+impl<T: Default + Send + 'static> L<T> {
+    const fn new() -> Self {
+        L {
+            val: Mutex::new(None),
         }
-        else if let Some(gen) = self.gen.take() {
-            self.val = Some(gen());
-            self.val.as_mut().unwrap()
+    }
+
+    fn get(&self) -> Arc<Mutex<T>> {
+        let mut guard = self.val.lock().unwrap();
+        if guard.is_none() {
+            guard.replace(Arc::new(Mutex::new(T::default())));
         }
-        else {
-            panic!();
-        }
+        guard.as_ref().unwrap().clone()
     }
 }
 
-impl<T, F: FnOnce() -> T> Deref for L<T, F> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        unsafe {
-            (self as *const L<T, F>).cast_mut().as_mut().unwrap().force()
-        }
-    }
-}
-
-impl<T, F: FnOnce() -> T> DerefMut for L<T, F> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.force()
-    }
-}
-
-static mut IDS: L<HashMap<String, u64>> = L { val: None, gen: Some(HashMap::new) };
+static IDS: L<HashMap<String, u64>> = L::new();
 
 pub fn next_id(key: &str) -> u64 {
-    unsafe {
-        if IDS.contains_key(key) {
-            let id = IDS.get_mut(key).unwrap();
-            *id += 1;
-            *id
-        }
-        else {
-            IDS.insert(key.to_string(), 0);
-            0
-        }
-    }
+    let ids = IDS.get();
+    let mut guard = ids.lock().unwrap_or_else(|e| e.into_inner());
+
+    let entry = guard.entry(key.to_string()).or_insert(0);
+    *entry += 1;
+
+    *entry
 }
 
 #[macro_export]
@@ -552,4 +547,91 @@ pub fn format_escaped(input: &str) -> String {
         }
     }
     output
+}
+
+/// `fn_for` macro.
+///
+/// This macro is used to generate functions that can be called directly from wrappers around
+/// a type, for example [`Arc<RwLock<T>>`]. Since you cannot use `self: Arc<RwLock<T>>`, you
+/// can use this macro instead to automatically generate a trait and implementations for the
+/// functions you need.
+///
+/// The macro also requires a token like `this` to replace `self` in the function body,
+/// because `self` cannot be used directly in the macro invocation.
+///
+/// The macro is unable to generate a trait name, therefore you have to give it one. It will also
+/// `seal!()` the trait to make it private (The functions keep the user-defined visibility). Because
+/// of this, you must have called the `sealable!()` macro before using this macro.
+///
+/// The syntax for the macro is as follows:
+///
+/// ```ignore
+/// fn_for!(Wrapper<Type> => visibility trait_name {
+///     fn function_name(this, parameters) -> return_type {
+///         function_body
+///     }
+/// });
+/// ```
+///
+/// # Examples
+///
+/// Here's an example of using `fn_for` to generate a trait and its implementation for an `Arc<RwLock<A>>`:
+///
+/// ```rust
+/// use std::sync::{Arc, RwLock};
+/// use mvutils::{sealable, fn_for};
+///
+/// struct A {
+///     i: i32,
+/// }
+///
+/// sealable!();
+///
+/// fn_for!(Arc<RwLock<A>> => pub ATrait {
+///     fn get(this, a: i32) -> i32 {
+///         this.read().unwrap().i
+///     }
+/// });
+/// ```
+///
+/// Note that `this` is used in the function body where `self` would normally be used.
+///
+/// # Notes
+///
+/// The `self` keyword cannot be used in the macro invocation itself. Instead, another token (in the examples, `this`) should be used.
+///
+/// Be sure to call `sealable!();` macro before invoking this macro to ensure the generation of a private sealed trait.
+#[macro_export]
+macro_rules! fn_for {
+    (
+        $(#[$outer:meta])*
+        $t:ty => $v:vis $i:ident {
+        $(
+            $(#[$inner:meta])*
+            fn $n:ident($this:ident, $($p:ident: $pt:ty),*) $(-> $r:ty)? $body:block
+        )*
+    }) => {
+        sealed!(
+        $(#[$outer:meta])*
+        $v trait $i {
+            $(
+                $(#[$inner])*
+                fn $n(&self, $($p: $pt),*) $(-> $r)?;
+            )*
+        }
+        );
+
+        seal!($t);
+
+        $(#[$outer:meta])*
+        impl $i for $t {
+            $(
+                $(#[$inner])*
+                fn $n(&self, $($p: $pt),*) $(-> $r)? {
+                    let $this = self;
+                    $body
+                }
+            )*
+        }
+    };
 }
