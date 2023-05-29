@@ -114,11 +114,7 @@ impl<T: PartialEq> PartialEq for UnsafeRef<T> {
     }
 }
 
-impl<T: Eq> Eq for UnsafeRef<T> {
-    fn assert_receiver_is_total_eq(&self) -> () {
-        self.deref().assert_receiver_is_total_eq()
-    }
-}
+impl<T: Eq> Eq for UnsafeRef<T> {}
 
 #[derive(Debug)]
 pub struct Nullable<T> {
@@ -239,13 +235,7 @@ impl<T: PartialEq> PartialEq for Nullable<T> {
     }
 }
 
-impl<T: Eq> Eq for Nullable<T> {
-    fn assert_receiver_is_total_eq(&self) -> () {
-        if !self.is_null() {
-            self.deref().assert_receiver_is_total_eq()
-        }
-    }
-}
+impl<T: Eq> Eq for Nullable<T> {}
 
 #[derive(Debug)]
 pub struct NullableRc<T> {

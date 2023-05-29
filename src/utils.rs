@@ -67,7 +67,7 @@ pub trait Map<T> {
 impl<T: Add<T, Output = T> + Sub<T, Output = T> + Mul<T, Output = T> + Div<T, Output = T> + PartialOrd + Copy> Map<T> for T {
     fn map(self, original: &Range<T>, target: &Range<T>) -> T {
         if self < original.start || self > original.end { return self }
-        return ((self - original.start) * (target.end - target.start) / (original.end - original.start)) + target.start;
+        ((self - original.start) * (target.end - target.start) / (original.end - original.start)) + target.start
     }
 }
 
