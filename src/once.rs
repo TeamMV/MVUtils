@@ -1,8 +1,10 @@
-use std::sync::{Once, atomic::{AtomicBool, Ordering}, Mutex};
+use std::any::Any;
+use std::sync::{Once, atomic::{AtomicBool, Ordering}, Mutex, Arc};
 use std::ops::Deref;
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::panic::{catch_unwind, UnwindSafe};
 
 #[derive(Debug, Default)]
 pub struct AlreadyInitialized;
@@ -14,6 +16,11 @@ impl Display for AlreadyInitialized {
 }
 
 impl Error for AlreadyInitialized {}
+
+pub enum InitError {
+    AlreadyInitialized(AlreadyInitialized),
+    Panicked(Box<dyn Any + Send +'static>)
+}
 
 pub struct InitOnce<T> {
     value: UnsafeCell<T>,
@@ -45,6 +52,27 @@ impl<T> InitOnce<T> {
         });
     }
 
+    pub fn safe_init<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>> where F: FnOnce(&mut T) + UnwindSafe {
+        if self.init_called.swap(true, Ordering::SeqCst) {
+            panic!("InitOnce::init called twice");
+        }
+
+        let panicked = Arc::new(Mutex::new(Some(Ok(()))));
+        let clone = panicked.clone();
+
+        self.once.call_once(|| {
+            let result = catch_unwind(|| {
+                let value = unsafe { &mut *self.value.get() };
+                f(value);
+            });
+
+            if let Err(e) = result {
+                clone.lock().unwrap().replace(Err(e));
+            }
+        });
+        panicked.lock().unwrap().take().unwrap()
+    }
+
     pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce(&mut T) {
         if self.init_called.swap(true, Ordering::SeqCst) {
             return Err(AlreadyInitialized);
@@ -56,6 +84,27 @@ impl<T> InitOnce<T> {
         });
 
         Ok(())
+    }
+
+    pub fn try_safe_init<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce(&mut T) + UnwindSafe {
+        if self.init_called.swap(true, Ordering::SeqCst) {
+            return Err(InitError::AlreadyInitialized(AlreadyInitialized));
+        }
+
+        let panicked = Arc::new(Mutex::new(Some(Ok(()))));
+        let clone = panicked.clone();
+
+        self.once.call_once(|| {
+            let result = catch_unwind(|| {
+                let value = unsafe { &mut *self.value.get() };
+                f(value);
+            });
+
+            if let Err(e) = result {
+                clone.lock().unwrap().replace(Err(InitError::Panicked(e)));
+            }
+        });
+        panicked.lock().unwrap().take().unwrap()
     }
 }
 
@@ -100,6 +149,27 @@ impl<T> CreateOnce<T> {
         });
     }
 
+    pub fn safe_create<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>> where F: FnOnce() -> T + UnwindSafe {
+        if self.init_called.swap(true, Ordering::SeqCst) {
+            panic!("InitOnce::init called twice");
+        }
+
+        let panicked = Arc::new(Mutex::new(Some(Ok(()))));
+        let clone = panicked.clone();
+
+        self.once.call_once(|| {
+            let result = catch_unwind(|| {
+                let value = f();
+                unsafe { &mut *self.value.get() }.replace(value);
+            });
+
+            if let Err(e) = result {
+                clone.lock().unwrap().replace(Err(e));
+            }
+        });
+        panicked.lock().unwrap().take().unwrap()
+    }
+
     pub fn try_create<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce() -> T {
         if self.init_called.swap(true, Ordering::SeqCst) {
             return Err(AlreadyInitialized);
@@ -111,6 +181,27 @@ impl<T> CreateOnce<T> {
         });
 
         Ok(())
+    }
+
+    pub fn try_safe_create<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce() -> T + UnwindSafe {
+        if self.init_called.swap(true, Ordering::SeqCst) {
+            Err(InitError::AlreadyInitialized(AlreadyInitialized))
+        }
+
+        let panicked = Arc::new(Mutex::new(Some(Ok(()))));
+        let clone = panicked.clone();
+
+        self.once.call_once(|| {
+            let result = catch_unwind(|| {
+                let value = f();
+                unsafe { &mut *self.value.get() }.replace(value);
+            });
+
+            if let Err(e) = result {
+                clone.lock().unwrap().replace(Err(InitError::Panicked(e)));
+            }
+        });
+        panicked.lock().unwrap().take().unwrap()
     }
 }
 
@@ -148,6 +239,10 @@ impl<T> Lazy<T> {
             init: Mutex::new(Some(f))
         }
     }
+
+    pub fn created(&self) -> bool {
+        self.value.created()
+    }
 }
 
 impl<T: Default> Lazy<T> {
@@ -184,6 +279,10 @@ impl<T> LazyInitOnce<T> {
         }
     }
 
+    pub fn created(&self) -> bool {
+        self.value.created()
+    }
+
     pub fn initialized(&self) -> bool {
         self.value.initialized()
     }
@@ -192,8 +291,16 @@ impl<T> LazyInitOnce<T> {
         self.value.init(f);
     }
 
+    pub fn safe_init<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>> where F: FnOnce(&mut T) + UnwindSafe {
+        self.value.safe_init(f)
+    }
+
     pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce(&mut T) {
         self.value.try_init(f)
+    }
+
+    pub fn try_safe_init<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce(&mut T) + UnwindSafe {
+        self.value.try_safe_init(f)
     }
 }
 
