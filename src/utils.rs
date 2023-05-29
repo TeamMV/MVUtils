@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::ops::Range;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::time::*;
 use num_traits::One;
+use crate::once::Lazy;
 
 pub trait Plural {
     fn plural(&self, count: u32) -> Self;
@@ -362,32 +363,10 @@ macro_rules! swap {
     };
 }
 
-struct L<T> {
-    val: Mutex<Option<Arc<Mutex<T>>>>,
-}
-
-impl<T: Default + Send + 'static> L<T> {
-    const fn new() -> Self {
-        L {
-            val: Mutex::new(None),
-        }
-    }
-
-    fn get(&self) -> Arc<Mutex<T>> {
-        let mut guard = self.val.lock().unwrap();
-        if guard.is_none() {
-            guard.replace(Arc::new(Mutex::new(T::default())));
-        }
-        guard.as_ref().unwrap().clone()
-    }
-}
-
-static IDS: L<HashMap<String, u64>> = L::new();
+static IDS: Lazy<Mutex<HashMap<String, u64>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn next_id(key: &str) -> u64 {
-    let ids = IDS.get();
-    let mut guard = ids.lock().unwrap_or_else(|e| e.into_inner());
-
+    let mut guard = IDS.lock().unwrap();
     let entry = guard.entry(key.to_string()).or_insert(0);
     *entry += 1;
 

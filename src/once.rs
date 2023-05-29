@@ -4,7 +4,8 @@ use std::ops::Deref;
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::panic::{catch_unwind, UnwindSafe};
+use std::panic;
+use std::panic::{catch_unwind, RefUnwindSafe, UnwindSafe};
 
 #[derive(Debug, Default)]
 pub struct AlreadyInitialized;
@@ -70,7 +71,8 @@ impl<T> InitOnce<T> {
                 clone.lock().unwrap().replace(Err(e));
             }
         });
-        panicked.lock().unwrap().take().unwrap()
+        let res = panicked.lock().unwrap().take().unwrap();
+        res
     }
 
     pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce(&mut T) {
@@ -104,7 +106,8 @@ impl<T> InitOnce<T> {
                 clone.lock().unwrap().replace(Err(InitError::Panicked(e)));
             }
         });
-        panicked.lock().unwrap().take().unwrap()
+        let res = panicked.lock().unwrap().take().unwrap();
+        res
     }
 }
 
@@ -118,6 +121,10 @@ impl<T> Deref for InitOnce<T> {
         unsafe { &*self.value.get() }
     }
 }
+
+unsafe impl<T: Send> Send for InitOnce<T> {}
+unsafe impl<T: Sync> Sync for InitOnce<T> {}
+impl<T> RefUnwindSafe for InitOnce<T> {}
 
 pub struct CreateOnce<T> {
     value: UnsafeCell<Option<T>>,
@@ -167,7 +174,8 @@ impl<T> CreateOnce<T> {
                 clone.lock().unwrap().replace(Err(e));
             }
         });
-        panicked.lock().unwrap().take().unwrap()
+        let res = panicked.lock().unwrap().take().unwrap();
+        res
     }
 
     pub fn try_create<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce() -> T {
@@ -185,7 +193,7 @@ impl<T> CreateOnce<T> {
 
     pub fn try_safe_create<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce() -> T + UnwindSafe {
         if self.init_called.swap(true, Ordering::SeqCst) {
-            Err(InitError::AlreadyInitialized(AlreadyInitialized))
+            return Err(InitError::AlreadyInitialized(AlreadyInitialized));
         }
 
         let panicked = Arc::new(Mutex::new(Some(Ok(()))));
@@ -201,7 +209,8 @@ impl<T> CreateOnce<T> {
                 clone.lock().unwrap().replace(Err(InitError::Panicked(e)));
             }
         });
-        panicked.lock().unwrap().take().unwrap()
+        let res = panicked.lock().unwrap().take().unwrap();
+        res
     }
 }
 
@@ -226,6 +235,10 @@ impl<T> Deref for CreateOnce<T> {
         unsafe { self.value.get().as_ref().unwrap() }.as_ref().unwrap()
     }
 }
+
+unsafe impl<T: Send> Send for CreateOnce<T> {}
+unsafe impl<T: Sync> Sync for CreateOnce<T> {}
+impl<T> RefUnwindSafe for CreateOnce<T> {}
 
 pub struct Lazy<T> {
     value: CreateOnce<T>,
@@ -265,6 +278,10 @@ impl<T> Deref for Lazy<T> {
         &self.value
     }
 }
+
+unsafe impl<T: Send> Send for Lazy<T> {}
+unsafe impl<T: Sync> Sync for Lazy<T> {}
+impl<T> RefUnwindSafe for Lazy<T> {}
 
 pub struct LazyInitOnce<T> {
     value: CreateOnce<InitOnce<T>>,
@@ -324,3 +341,7 @@ impl<T> Deref for LazyInitOnce<T> {
         &self.value
     }
 }
+
+unsafe impl<T: Send> Send for LazyInitOnce<T> {}
+unsafe impl<T: Sync> Sync for LazyInitOnce<T> {}
+impl<T> RefUnwindSafe for LazyInitOnce<T> {}
