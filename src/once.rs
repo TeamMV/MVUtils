@@ -325,18 +325,34 @@ impl<T> LazyInitOnce<T> {
     }
 
     pub fn init<F>(&self, f: F) where F: FnOnce(&mut T) {
+        let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(init) = init.take() {
+            self.value.create(|| InitOnce::new(init()));
+        }
         self.value.init(f);
     }
 
     pub fn safe_init<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>> where F: FnOnce(&mut T) + UnwindSafe {
+        let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(init) = init.take() {
+            self.value.create(|| InitOnce::new(init()));
+        }
         self.value.safe_init(f)
     }
 
     pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce(&mut T) {
+        let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(init) = init.take() {
+            self.value.create(|| InitOnce::new(init()));
+        }
         self.value.try_init(f)
     }
 
     pub fn try_safe_init<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce(&mut T) + UnwindSafe {
+        let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(init) = init.take() {
+            self.value.create(|| InitOnce::new(init()));
+        }
         self.value.try_safe_init(f)
     }
 }
@@ -354,9 +370,8 @@ impl<T> Deref for LazyInitOnce<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        let mut f = self.init.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(f) = f.take() {
-            self.value.create(|| InitOnce::new(f()));
+        if self.init.lock().unwrap_or_else(|e| e.into_inner()).is_some() {
+            panic!("InitOnce::deref called before InitOnce::init");
         }
         &self.value
     }

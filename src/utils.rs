@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::ops::Range;
-use std::sync::Mutex;
+use std::sync::{LockResult, Mutex};
 use std::time::*;
 use num_traits::One;
 use crate::once::Lazy;
@@ -613,4 +613,14 @@ macro_rules! fn_for {
             )*
         }
     };
+}
+
+pub trait Recover<T> {
+    fn recover(self) -> T;
+}
+
+impl<T> Recover<T> for LockResult<T> {
+    fn recover(self) -> T {
+        self.unwrap_or_else(|r| r.into_inner())
+    }
 }
