@@ -2,6 +2,7 @@ use std::alloc::Layout;
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
+use std::mem::size_of;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -137,7 +138,7 @@ impl<T> Nullable<T> {
     pub fn null() -> Nullable<T> {
         Nullable {
             ptr: std::ptr::null_mut(),
-            drop: true
+            drop: false
         }
     }
 
@@ -152,6 +153,41 @@ impl<T> Nullable<T> {
 
     pub fn is_null(&self) -> bool {
         self.ptr.is_null()
+    }
+
+    pub fn replace(&mut self, value: T) {
+        unsafe {
+            if self.ptr.is_null() {
+                let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+                ptr.write(value);
+                self.ptr = ptr;
+                self.drop = true;
+            } else {
+                self.ptr.write(value);
+            }
+        }
+    }
+
+    pub fn replace_null(&mut self) {
+        unsafe {
+            if !self.ptr.is_null() {
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+                self.ptr = std::ptr::null_mut();
+                self.drop = false;
+            }
+        }
+    }
+
+    pub fn replace_zeroed(&mut self) {
+        unsafe {
+            if self.ptr.is_null() {
+                let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+                self.ptr = ptr;
+                self.drop = true;
+            } else {
+                self.ptr.write_bytes(0, Layout::new::<T>().size());
+            }
+        }
     }
 
     pub fn extract(self) -> T {
