@@ -10,8 +10,17 @@ pub mod once;
 #[cfg(test)]
 mod tests {
 
+    use crate::lazy;
+    use crate::once::*;
+
     #[test]
     fn it_works() {
+        lazy! {
+            let mut hello: String = "hello".to_string();
+        };
 
+        hello.push_str(" world!");
+
+        println!("{}", *hello);
     }
 }

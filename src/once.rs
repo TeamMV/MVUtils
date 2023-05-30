@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::sync::{Once, atomic::{AtomicBool, Ordering}, Mutex, Arc};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -236,6 +236,16 @@ impl<T> Deref for CreateOnce<T> {
     }
 }
 
+impl<T> DerefMut for CreateOnce<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        if !self.init_called.load(Ordering::Relaxed) {
+            panic!("CreateOnce::deref called before CreateOnce::create");
+        }
+
+        unsafe { self.value.get().as_mut().unwrap() }.as_mut().unwrap()
+    }
+}
+
 unsafe impl<T: Send> Send for CreateOnce<T> {}
 unsafe impl<T: Sync> Sync for CreateOnce<T> {}
 impl<T> RefUnwindSafe for CreateOnce<T> {}
@@ -276,6 +286,16 @@ impl<T> Deref for Lazy<T> {
             self.value.create(f);
         }
         &self.value
+    }
+}
+
+impl<T> DerefMut for Lazy<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        let mut f = self.init.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(f) = f.take() {
+            self.value.create(f);
+        }
+        &mut self.value
     }
 }
 
@@ -345,3 +365,83 @@ impl<T> Deref for LazyInitOnce<T> {
 unsafe impl<T: Send> Send for LazyInitOnce<T> {}
 unsafe impl<T: Sync> Sync for LazyInitOnce<T> {}
 impl<T> RefUnwindSafe for LazyInitOnce<T> {}
+
+#[macro_export]
+macro_rules! lazy_init {
+    {
+        $(
+            $v:vis static $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            $v static $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
+        )*
+    };
+    {
+        $(
+            let $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            let $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
+        )*
+    };
+    {
+        $(
+            $v:vis static mut $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            $v static mut $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
+        )*
+    };
+    {
+        $(
+            let mut $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            let mut $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
+        )*
+    };
+}
+
+#[macro_export]
+macro_rules! lazy {
+    {
+        $(
+            $v:vis static $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            $v static $name: Lazy<$t> = Lazy::new(|| { $init });
+        )*
+    };
+    {
+        $(
+            let $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            let $name: Lazy<$t> = Lazy::new(|| { $init });
+        )*
+    };
+    {
+        $(
+            $v:vis static mut $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            $v static mut $name: Lazy<$t> = Lazy::new(|| { $init });
+        )*
+    };
+    {
+        $(
+            let mut $name:ident: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            let mut $name: Lazy<$t> = Lazy::new(|| { $init });
+        )*
+    };
+}
