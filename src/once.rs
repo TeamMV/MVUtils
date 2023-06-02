@@ -409,38 +409,20 @@ impl<T> RefUnwindSafe for LazyInitOnce<T> {}
 macro_rules! lazy_init {
     {
         $(
-            $v:vis static $name:ident: $t:ty = $init:expr;
+            $v:vis static $n:ident $($k:ident)?: $t:ty = $init:expr;
         )*
     } => {
         $(
-            $v static $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
+            $v static $n $($k)?: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
         )*
     };
     {
         $(
-            let $name:ident: $t:ty = $init:expr;
+            let $n:ident $($k:ident)?$(: $t:ty)? = $init:expr;
         )*
     } => {
         $(
-            let $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
-        )*
-    };
-    {
-        $(
-            $v:vis static mut $name:ident: $t:ty = $init:expr;
-        )*
-    } => {
-        $(
-            $v static mut $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
-        )*
-    };
-    {
-        $(
-            let mut $name:ident: $t:ty = $init:expr;
-        )*
-    } => {
-        $(
-            let mut $name: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
+            let $n $($k)?$(: LazyInitOnce<$t>)? = LazyInitOnce::new(|| { $init });
         )*
     };
 }
@@ -449,78 +431,42 @@ macro_rules! lazy_init {
 macro_rules! lazy {
     {
         $(
-            $v:vis static $name:ident: $t:ty = $init:expr;
+            $v:vis static $n:ident $($k:ident)?: $t:ty = $init:expr;
         )*
     } => {
         $(
-            $v static $name: Lazy<$t> = Lazy::new(|| { $init });
+            $v static $n $($k)?: Lazy<$t> = Lazy::new(|| { $init });
         )*
     };
     {
         $(
-            let $name:ident: $t:ty = $init:expr;
+            let $n:ident $($k:ident)?$(: $t:ty)? = $init:expr;
         )*
     } => {
         $(
-            let $name: Lazy<$t> = Lazy::new(|| { $init });
-        )*
-    };
-    {
-        $(
-            $v:vis static mut $name:ident: $t:ty = $init:expr;
-        )*
-    } => {
-        $(
-            $v static mut $name: Lazy<$t> = Lazy::new(|| { $init });
-        )*
-    };
-    {
-        $(
-            let mut $name:ident: $t:ty = $init:expr;
-        )*
-    } => {
-        $(
-            let mut $name: Lazy<$t> = Lazy::new(|| { $init });
+            let $n $($k)?$(: Lazy<$t>)? = Lazy::new(|| { $init });
         )*
     };
 }
 
 #[macro_export]
 macro_rules! create_once {
-    {
+     {
         $(
-            $v:vis static $name:ident: $t:ty;
+            $v:vis static $n:ident $($k:ident)?: $t:ty;
         )*
     } => {
         $(
-            $v static $name: CreateOnce<$t> = CreateOnce::new();
+            $v static $n $($k)?: CreateOnce<$t> = CreateOnce::new();
         )*
     };
     {
         $(
-            let $name:ident: $t:ty ;
+            let $n:ident $($k:ident)?: $t:ty;
         )*
     } => {
         $(
-            let $name: CreateOnce<$t> = CreateOnce::new();
-        )*
-    };
-    {
-        $(
-            $v:vis static mut $name:ident: $t:ty;
-        )*
-    } => {
-        $(
-            $v static mut $name: CreateOnce<$t> = CreateOnce::new();
-        )*
-    };
-    {
-        $(
-            let mut $name:ident: $t:ty;
-        )*
-    } => {
-        $(
-            let mut $name: CreateOnce<$t> = CreateOnce::new();
+            let $n $($k)?: CreateOnce<$t> = CreateOnce::new();
         )*
     };
 }

@@ -381,6 +381,7 @@ macro_rules! swap {
 lazy! {
     static IDS: Mutex<HashMap<String, u64>> = Mutex::new(HashMap::new());
 }
+
 pub fn next_id(key: &str) -> u64 {
     let mut guard = IDS.lock().unwrap();
     let entry = guard.entry(key.to_string()).or_insert(0);
