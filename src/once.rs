@@ -128,6 +128,12 @@ impl<T: Display> Display for InitOnce<T> {
     }
 }
 
+impl<T> From<T> for InitOnce<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
 unsafe impl<T: Send> Send for InitOnce<T> {}
 unsafe impl<T: Sync> Sync for InitOnce<T> {}
 impl<T> RefUnwindSafe for InitOnce<T> {}

@@ -673,6 +673,12 @@ impl<T: Copy> DangerousCell<T> {
     }
 }
 
+impl<T> From<T> for DangerousCell<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
+    }
+}
+
 #[macro_export]
 macro_rules! unsafe_cast {
     ($val:ident, $to:ty) => {
