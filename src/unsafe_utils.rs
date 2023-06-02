@@ -1,4 +1,5 @@
 use std::alloc::Layout;
+use std::cell::UnsafeCell;
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
@@ -634,6 +635,43 @@ impl<T: Eq> Eq for UnsafeArc<T> {}
 unsafe impl<T: Send> Send for UnsafeArc<T> {}
 
 unsafe impl<T: Sync> Sync for UnsafeArc<T> {}
+
+#[repr(transparent)]
+pub struct DangerousCell<T> {
+    inner: UnsafeCell<T>
+}
+
+impl<T> DangerousCell<T> {
+    #[inline(always)]
+    pub fn new(value: T) -> Self {
+        DangerousCell {
+            inner: UnsafeCell::new(value)
+        }
+    }
+
+    #[inline(always)]
+    pub fn get(&self) -> &T {
+        unsafe { self.inner.get().as_ref().unwrap() }
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    #[inline(always)]
+    pub fn get_mut(&self) -> &mut T {
+        unsafe { self.inner.get().as_mut().unwrap() }
+    }
+
+    #[inline(always)]
+    pub fn replace(&self, value: T) {
+        unsafe { self.inner.get().write(value); }
+    }
+}
+
+impl<T: Copy> DangerousCell<T> {
+    #[inline(always)]
+    pub fn get_val(&self) -> T {
+        unsafe { *self.inner.get() }
+    }
+}
 
 #[macro_export]
 macro_rules! unsafe_cast {
