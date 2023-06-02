@@ -4,6 +4,7 @@ use std::ops::Range;
 use std::sync::{LockResult, Mutex};
 use std::time::*;
 use num_traits::One;
+use crate::lazy;
 use crate::once::Lazy;
 
 pub trait Plural {
@@ -206,24 +207,38 @@ impl Time for u128 {
 
 pub trait IncDec {
     fn inc(&mut self) -> Self;
+    fn post_inc(&mut self) -> Self;
     fn dec(&mut self) -> Self;
+    fn post_dec(&mut self) -> Self;
 }
 
-impl<T: Add<T, Output = T> + Sub<T, Output = T> + AddAssign + SubAssign + One + Copy> IncDec for T {
+impl<T: AddAssign + SubAssign + One + Copy> IncDec for T {
     fn inc(&mut self) -> Self {
         *self += T::one();
         *self
     }
 
-    fn dec(&mut self) -> Self {
+    fn post_inc(&mut self) -> Self {
+        let ret = *self;
+        *self += T::one();
+        ret
+    }
+
+    fn dec(&mut self) -> Self  {
         *self -= T::one();
         *self
+    }
+
+    fn post_dec(&mut self) -> Self {
+        let ret = *self;
+        *self -= T::one();
+        ret
     }
 }
 
 #[macro_export]
 macro_rules ! init_arr {
-    ($len:expr, $item:expr) => {
+    ($len:literal, $item:expr) => {
         [0; $len].map(|_| $item)
     };
 }
@@ -363,8 +378,9 @@ macro_rules! swap {
     };
 }
 
-static IDS: Lazy<Mutex<HashMap<String, u64>>> = Lazy::new(|| Mutex::new(HashMap::new()));
-
+lazy! {
+    static IDS: Mutex<HashMap<String, u64>> = Mutex::new(HashMap::new());
+}
 pub fn next_id(key: &str) -> u64 {
     let mut guard = IDS.lock().unwrap();
     let entry = guard.entry(key.to_string()).or_insert(0);
