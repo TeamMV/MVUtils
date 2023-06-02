@@ -122,6 +122,12 @@ impl<T> Deref for InitOnce<T> {
     }
 }
 
+impl<T: Display> Display for InitOnce<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
 unsafe impl<T: Send> Send for InitOnce<T> {}
 unsafe impl<T: Sync> Sync for InitOnce<T> {}
 impl<T> RefUnwindSafe for InitOnce<T> {}
@@ -246,6 +252,12 @@ impl<T> DerefMut for CreateOnce<T> {
     }
 }
 
+impl<T: Display> Display for CreateOnce<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
 unsafe impl<T: Send> Send for CreateOnce<T> {}
 unsafe impl<T: Sync> Sync for CreateOnce<T> {}
 impl<T> RefUnwindSafe for CreateOnce<T> {}
@@ -296,6 +308,12 @@ impl<T> DerefMut for Lazy<T> {
             self.value.create(f);
         }
         &mut self.value
+    }
+}
+
+impl<T: Display> Display for Lazy<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
     }
 }
 
@@ -374,6 +392,12 @@ impl<T> Deref for LazyInitOnce<T> {
             panic!("InitOnce::deref called before InitOnce::init");
         }
         &self.value
+    }
+}
+
+impl<T: Display> Display for LazyInitOnce<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
     }
 }
 
@@ -457,6 +481,46 @@ macro_rules! lazy {
     } => {
         $(
             let mut $name: Lazy<$t> = Lazy::new(|| { $init });
+        )*
+    };
+}
+
+#[macro_export]
+macro_rules! create_once {
+    {
+        $(
+            $v:vis static $name:ident: $t:ty;
+        )*
+    } => {
+        $(
+            $v static $name: CreateOnce<$t> = CreateOnce::new();
+        )*
+    };
+    {
+        $(
+            let $name:ident: $t:ty ;
+        )*
+    } => {
+        $(
+            let $name: CreateOnce<$t> = CreateOnce::new();
+        )*
+    };
+    {
+        $(
+            $v:vis static mut $name:ident: $t:ty;
+        )*
+    } => {
+        $(
+            $v static mut $name: CreateOnce<$t> = CreateOnce::new();
+        )*
+    };
+    {
+        $(
+            let mut $name:ident: $t:ty;
+        )*
+    } => {
+        $(
+            let mut $name: CreateOnce<$t> = CreateOnce::new();
         )*
     };
 }
