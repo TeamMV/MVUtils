@@ -6,6 +6,7 @@ pub mod save;
 pub mod unsafe_utils;
 pub mod print;
 pub mod once;
+pub mod static_vec;
 
 #[cfg(test)]
 mod tests {
