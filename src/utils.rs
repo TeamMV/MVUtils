@@ -197,11 +197,11 @@ pub trait Time {
 
 impl Time for u128 {
     fn time_millis() -> Self {
-        SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis()
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_else(|e| panic!("System clock error: Time elapsed of -{}ms is not valid!", e.duration().as_millis())).as_millis()
     }
 
     fn time_nanos() -> Self {
-        SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_nanos()
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_else(|e| panic!("System clock error: Time elapsed of -{}ns is not valid!", e.duration().as_nanos())).as_nanos()
     }
 }
 

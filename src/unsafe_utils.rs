@@ -55,10 +55,22 @@ impl<T> UnsafeRef<T> {
         self.ptr == other.ptr
     }
 
+    /// Reinterpret the bytes at this pointer as static reference. This does not change the bytes at the
+    /// reference, nor does it prevent them from being dropped.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
+    /// the rest of the program.
     pub unsafe fn as_static(&self) -> &'static T {
         (self.ptr as *const T).as_ref().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
     }
 
+    /// Reinterpret the bytes at this pointer as static mutable reference. This does not change the bytes at the
+    /// reference, nor does it prevent them from being dropped.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
+    /// the rest of the program.
     pub unsafe fn as_static_mut(&mut self) -> &'static T {
         (self.ptr as *mut T).as_mut().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
     }
@@ -416,26 +428,49 @@ impl<T: Eq> Eq for NullableRc<T> {}
 pub struct Unsafe;
 
 impl Unsafe {
-    pub unsafe fn cast<T, R>(value: T) -> R {
-        std::ptr::read(&value as *const T as *mut R)
-    }
 
+    /// Reinterpret the bytes at this pointer as another type. This does not change the bytes at the
+    /// reference.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
+    /// and [`R`] are of the same size and alignment.
     pub unsafe fn cast_ref<T, R>(value: &T) -> &R {
         (value as *const T as *const R).as_ref().unwrap()
     }
 
+    /// Reinterpret the bytes at this mutable pointer as another type. This does not change the bytes at the
+    /// reference.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
+    /// and [`R`] are of the same size and alignment.
     pub unsafe fn cast_mut<T, R>(value: &mut T) -> &mut R {
         (value as *mut T as *mut R).as_mut().unwrap()
     }
 
+    /// Reinterpret the bytes at this pointer as static reference. This does not change the bytes at the
+    /// reference, nor does it prevent them from being dropped.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
+    /// the rest of the program.
     pub unsafe fn cast_static<T>(value: &T) -> &'static T {
         (value as *const T).as_ref().unwrap()
     }
 
+    /// Reinterpret the bytes at this mutable pointer as static reference. This does not change the bytes at the
+    /// reference, nor does it prevent them from being dropped.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
+    /// the rest of the program.
     pub unsafe fn cast_mut_static<T>(value: &mut T) -> &'static mut T {
         (value as *mut T).as_mut().unwrap()
     }
 
+    /// Move the value to the heap and keep it alive for the rest of the program. Returning a reference
+    /// to the value.
     pub fn leak<T>(value: T) -> &'static T {
         unsafe {
             let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
@@ -444,6 +479,8 @@ impl Unsafe {
         }
     }
 
+    /// Move the value to the heap and keep it alive for the rest of the program. Returning a mutable reference
+    /// to the value.
     pub fn leak_mut<T>(value: T) -> &'static mut T {
         unsafe {
             let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
@@ -452,6 +489,11 @@ impl Unsafe {
         }
     }
 
+    /// Allocate a zeroed value on the heap and return a reference to it of type [`T`].
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the type [`T`] is valid with the zeroed data,
+    /// or that the data is added before handing this reference to other parts of the program.
     pub unsafe fn leak_zeroed<T>() -> &'static T {
         unsafe {
             let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *const T;
@@ -459,6 +501,11 @@ impl Unsafe {
         }
     }
 
+    /// Allocate a zeroed value on the heap and return a mutable reference to it of type [`T`].
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the type [`T`] is valid with the zeroed data,
+    /// or that the data is added before handing this reference to other parts of the program.
     pub unsafe fn leak_zeroed_mut<T>() -> &'static mut T {
         unsafe {
             let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
