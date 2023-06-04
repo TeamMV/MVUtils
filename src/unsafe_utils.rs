@@ -324,6 +324,12 @@ impl<T: PartialEq> PartialEq for Nullable<T> {
 
 impl<T: Eq> Eq for Nullable<T> {}
 
+impl<T> From<T> for Nullable<T> {
+    fn from(value: T) -> Nullable<T> {
+        Nullable::new(value)
+    }
+}
+
 #[derive(Debug)]
 pub struct StackNullable<T> {
     val: Option<T>,
@@ -435,6 +441,12 @@ impl<T: PartialEq> PartialEq for StackNullable<T> {
 }
 
 impl<T: Eq> Eq for StackNullable<T> {}
+
+impl<T> From<T> for StackNullable<T> {
+    fn from(value: T) -> StackNullable<T> {
+        StackNullable::new(value)
+    }
+}
 
 #[derive(Debug)]
 pub struct NullableRc<T> {
@@ -575,6 +587,12 @@ impl<T: PartialEq> PartialEq for NullableRc<T> {
 }
 
 impl<T: Eq> Eq for NullableRc<T> {}
+
+impl<T> From<T> for NullableRc<T> {
+    fn from(value: T) -> NullableRc<T> {
+        NullableRc::new(value)
+    }
+}
 
 pub struct Unsafe;
 
@@ -752,6 +770,12 @@ impl<T: PartialEq> PartialEq for UnsafeRc<T> {
 
 impl<T: Eq> Eq for UnsafeRc<T> {}
 
+impl<T> From<T> for UnsafeRc<T> {
+    fn from(value: T) -> Self {
+        UnsafeRc::new(value)
+    }
+}
+
 pub struct UnsafeArc<T> {
     ptr: *const T,
     alloc: bool,
@@ -829,6 +853,12 @@ impl<T: PartialEq> PartialEq for UnsafeArc<T> {
 }
 
 impl<T: Eq> Eq for UnsafeArc<T> {}
+
+impl<T> From<T> for UnsafeArc<T> {
+    fn from(value: T) -> Self {
+        UnsafeArc::new(value)
+    }
+}
 
 unsafe impl<T: Send> Send for UnsafeArc<T> {}
 
