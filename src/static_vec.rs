@@ -9,6 +9,12 @@ pub struct StaticVec<T> {
     len: usize,
 }
 
+impl<T: Default + Clone> StaticVec<T> {
+    pub fn new_default(len: usize) -> Self {
+        vec![T::default(); len].into()
+    }
+}
+
 impl<T> StaticVec<T> {
     pub fn new(len: usize) -> Self {
         unsafe {
@@ -54,7 +60,7 @@ impl<T> StaticVec<T> {
 
     pub fn set(&mut self, index: usize, value: T) {
         if index >= self.len {
-            panic!("Index out of bounds!");
+            panic!("Index {index} out of bounds for length {}!", self.len);
         }
         unsafe {
             self.ptr.as_ptr().add(index).write(value);
@@ -195,6 +201,9 @@ impl<T: Debug> Debug for StaticVec<T> {
 impl<T> Drop for StaticVec<T> {
     fn drop(&mut self) {
         unsafe {
+            for i in 0..self.len {
+                std::ptr::drop_in_place(self.as_mut_ptr().add(i));
+            }
             dealloc(self.ptr.as_ptr() as *mut u8, Layout::array::<T>(self.len).unwrap_or_else(|_| panic!("Length of {} not valid!", self.len)));
         }
     }
