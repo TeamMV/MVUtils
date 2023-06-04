@@ -202,6 +202,45 @@ impl<T> Nullable<T> {
         }
     }
 
+    pub fn take_replace(&mut self, value: T) -> T {
+        unsafe {
+            if self.ptr.is_null() {
+                panic!("Null pointer dereference!")
+            } else {
+                let val = self.ptr.read();
+                self.ptr.write(value);
+                val
+            }
+        }
+    }
+
+    pub fn take_replace_null(&mut self) -> T {
+        unsafe {
+            if !self.ptr.is_null() {
+                let val = self.ptr.read();
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+                self.ptr = std::ptr::null_mut();
+                self.drop = false;
+                val
+            }
+            else {
+                panic!("Null pointer dereference!")
+            }
+        }
+    }
+
+    pub fn take_replace_zeroed(&mut self) -> T {
+        unsafe {
+            if self.ptr.is_null() {
+                panic!("Null pointer dereference!")
+            } else {
+                let val = self.ptr.read();
+                self.ptr.write_bytes(0, Layout::new::<T>().size());
+                val
+            }
+        }
+    }
+
     pub fn extract(self) -> T {
         unsafe {
             std::ptr::read(self.ptr)
@@ -284,6 +323,118 @@ impl<T: PartialEq> PartialEq for Nullable<T> {
 }
 
 impl<T: Eq> Eq for Nullable<T> {}
+
+#[derive(Debug)]
+pub struct StackNullable<T> {
+    val: Option<T>,
+}
+
+impl<T> StackNullable<T> {
+    pub fn new(value: T) -> StackNullable<T> {
+        StackNullable {
+            val: Some(value)
+        }
+    }
+
+    pub fn null() -> StackNullable<T> {
+        StackNullable {
+            val: None
+        }
+    }
+
+    pub fn zeroed() -> StackNullable<T> {
+        unsafe {
+            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+            let val = ptr.read();
+            std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
+            StackNullable {
+                val: Some(val)
+            }
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.val.is_none()
+    }
+
+    pub fn replace(&mut self, value: T) {
+        self.val.replace(value);
+    }
+
+    pub fn replace_null(&mut self) {
+        self.val.take();
+    }
+
+    pub fn replace_zeroed(&mut self) {
+        unsafe {
+            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+            let val = ptr.read();
+            std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
+            self.val.replace(val);
+        }
+    }
+
+    pub fn take_replace(&mut self, value: T) -> T {
+        self.val.replace(value).expect("Null pointer dereference!")
+    }
+
+    pub fn take_replace_null(&mut self) -> T {
+        self.val.take().expect("Null pointer dereference!")
+    }
+
+    pub fn take_replace_zeroed(&mut self) -> T {
+        unsafe {
+            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+            let val = ptr.read();
+            std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
+            self.val.replace(val).expect("Null pointer dereference!")
+        }
+    }
+
+    pub fn extract(self) -> T {
+        self.val.expect("Extracting a null value!")
+    }
+}
+
+impl<T> Deref for StackNullable<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        self.val.as_ref().expect("Null pointer dereference! Check using StackNullable::is_null() before dereferencing!")
+    }
+}
+
+impl<T> DerefMut for StackNullable<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        self.val.as_mut().expect("Null pointer dereference! Check using StackNullable::is_null() before dereferencing!")
+    }
+}
+
+impl<T: Display> Display for StackNullable<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_null() {
+            f.write_str("null")
+        }
+        else {
+            self.deref().fmt(f)
+        }
+    }
+}
+
+impl<T: PartialEq> PartialEq for StackNullable<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.is_null() {
+            other.is_null()
+        }
+        else if other.is_null() {
+            false
+        }
+        else {
+            self.deref() == other.deref()
+        }
+    }
+}
+
+impl<T: Eq> Eq for StackNullable<T> {}
 
 #[derive(Debug)]
 pub struct NullableRc<T> {

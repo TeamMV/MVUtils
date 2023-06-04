@@ -1,11 +1,11 @@
-use std::alloc::{alloc_zeroed, dealloc, Layout};
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
-use std::ptr::NonNull;
-use std::slice;
+use std::slice::{Iter, IterMut};
+use std::vec::IntoIter;
+use crate::unsafe_utils::Nullable;
 
 pub struct StaticVec<T> {
-    ptr: NonNull<T>,
+    vec: Vec<Nullable<T>>,
     len: usize,
 }
 
@@ -17,21 +17,18 @@ impl<T: Default + Clone> StaticVec<T> {
 
 impl<T> StaticVec<T> {
     pub fn new(len: usize) -> Self {
-        unsafe {
-            let ptr = alloc_zeroed(Layout::array::<T>(len).unwrap_or_else(|_| panic!("Length of {len} not valid!"))) as *mut T;
-            Self {
-                ptr: NonNull::new(ptr).expect("Failed to allocate memory for StaticVec!"),
-                len,
-            }
+        StaticVec {
+            vec: vec![0; len].into_iter().map(|_| Nullable::null()).collect(),
+            len
         }
     }
 
-    pub fn as_ptr(&self) -> *const T {
-        self.ptr.as_ptr()
+    pub fn as_ptr(&self) -> *const Nullable<T> {
+        self.vec.as_ptr()
     }
 
-    pub fn as_mut_ptr(&mut self) -> *mut T {
-        self.ptr.as_ptr()
+    pub fn as_mut_ptr(&mut self) -> *mut Nullable<T> {
+        self.vec.as_mut_ptr()
     }
 
     pub fn len(&self) -> usize {
@@ -42,61 +39,42 @@ impl<T> StaticVec<T> {
         self.len == 0
     }
 
-    pub fn get(&self, index: usize) -> Option<&T> {
-        if index >= self.len {
-            None
-        } else {
-            Some(unsafe { self.ptr.as_ptr().add(index).as_ref().unwrap() })
-        }
+    pub fn get(&self, index: usize) -> Option<&Nullable<T>> {
+        self.vec.get(index)
     }
 
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        if index >= self.len {
-            None
-        } else {
-            Some(unsafe { self.ptr.as_ptr().add(index).as_mut().unwrap() })
-        }
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Nullable<T>> {
+        self.vec.get_mut(index)
     }
 
     pub fn set(&mut self, index: usize, value: T) {
         if index >= self.len {
             panic!("Index {index} out of bounds for length {}!", self.len);
         }
-        unsafe {
-            self.ptr.as_ptr().add(index).write(value);
-        }
+        self.vec[index] = Nullable::new(value);
     }
 
-    pub fn iter(&self) -> StaticVecIter<T> {
-        StaticVecIter {
-            vec: self,
-            index: 0
-        }
+    pub fn iter(&self) -> Iter<Nullable<T>> {
+        self.vec.iter()
     }
 
-    pub fn iter_mut(&mut self) -> StaticVecIterMut<T> {
-        StaticVecIterMut {
-            vec: self,
-            index: 0
-        }
+    pub fn iter_mut(&mut self) -> IterMut<Nullable<T>> {
+        self.vec.iter_mut()
     }
 }
 
 impl<T> IntoIterator for StaticVec<T> {
-    type Item = T;
-    type IntoIter = StaticVecIntoIter<T>;
+    type Item = Nullable<T>;
+    type IntoIter = IntoIter<Nullable<T>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        StaticVecIntoIter {
-            vec: self,
-            index: 0
-        }
+        self.vec.into_iter()
     }
 }
 
 impl<'a, T> IntoIterator for &'a StaticVec<T> {
-    type Item = &'a T;
-    type IntoIter = StaticVecIter<'a, T>;
+    type Item = &'a Nullable<T>;
+    type IntoIter = Iter<'a, Nullable<T>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -104,8 +82,8 @@ impl<'a, T> IntoIterator for &'a StaticVec<T> {
 }
 
 impl<'a, T> IntoIterator for &'a mut StaticVec<T> {
-    type Item = &'a mut T;
-    type IntoIter = StaticVecIterMut<'a, T>;
+    type Item = &'a mut Nullable<T>;
+    type IntoIter = IterMut<'a, Nullable<T>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
@@ -114,10 +92,21 @@ impl<'a, T> IntoIterator for &'a mut StaticVec<T> {
 
 impl<T> FromIterator<T> for StaticVec<T> {
     fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
+        let vec = iter.into_iter().map(|v| Nullable::new(v)).collect::<Vec<_>>();
+        let len = vec.len();
+        StaticVec {
+            vec,
+            len,
+        }
+    }
+}
+
+impl<T> FromIterator<Nullable<T>> for StaticVec<T> {
+    fn from_iter<I: IntoIterator<Item=Nullable<T>>>(iter: I) -> Self {
         let vec = iter.into_iter().collect::<Vec<_>>();
         let len = vec.len();
         StaticVec {
-            ptr: NonNull::new(vec.leak().as_mut_ptr()).expect("Failed to collect into StaticVec!"),
+            vec,
             len,
         }
     }
@@ -125,9 +114,21 @@ impl<T> FromIterator<T> for StaticVec<T> {
 
 impl<T> From<Vec<T>> for StaticVec<T> {
     fn from(vec: Vec<T>) -> Self {
+        let vec = vec.into_iter().map(|v| Nullable::new(v)).collect::<Vec<_>>();
         let len = vec.len();
         StaticVec {
-            ptr: NonNull::new(vec.leak().as_mut_ptr()).expect("Failed to collect into StaticVec!"),
+            vec,
+            len,
+        }
+    }
+}
+
+impl<T> From<Vec<Nullable<T>>> for StaticVec<T> {
+    fn from(vec: Vec<Nullable<T>>) -> Self {
+        let vec = vec.into_iter().collect::<Vec<_>>();
+        let len = vec.len();
+        StaticVec {
+            vec,
             len,
         }
     }
@@ -138,7 +139,7 @@ impl<T: Clone> From<&[T]> for StaticVec<T> {
         let len = slice.len();
         let mut vec = StaticVec::new(len);
         for (i, t) in slice.iter().enumerate() {
-            vec[i] = t.clone();
+            vec[i] = Nullable::new(t.clone());
         }
         vec
     }
@@ -149,18 +150,18 @@ impl<T: Clone> From<&mut [T]> for StaticVec<T> {
         let len = slice.len();
         let mut vec = StaticVec::new(len);
         for (i, t) in slice.iter().enumerate() {
-            vec[i] = t.clone();
+            vec[i] = Nullable::new(t.clone());
         }
         vec
     }
 }
 
 impl<T> Deref for StaticVec<T> {
-    type Target = [T];
+    type Target = [Nullable<T>];
 
     #[inline]
-    fn deref(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.as_ptr(), self.len) }
+    fn deref(&self) -> &[Nullable<T>] {
+        &self.vec
     }
 }
 
@@ -168,18 +169,18 @@ impl<T> DerefMut for StaticVec<T> {
 
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.len) }
+        &mut self.vec
     }
 }
 
 impl<T> Index<usize> for StaticVec<T> {
-    type Output = T;
+    type Output = Nullable<T>;
 
     fn index(&self, index: usize) -> &Self::Output {
         if index >= self.len {
             panic!("Index {index} out of bounds for length {}!", self.len);
         }
-        unsafe { self.ptr.as_ptr().add(index).as_ref().unwrap() }
+        &self.vec[index]
     }
 }
 
@@ -188,78 +189,12 @@ impl<T> IndexMut<usize> for StaticVec<T> {
         if index >= self.len {
             panic!("Index {index} out of bounds for length {}!", self.len);
         }
-        unsafe { self.ptr.as_ptr().add(index).as_mut().unwrap() }
+        &mut self.vec[index]
     }
 }
 
 impl<T: Debug> Debug for StaticVec<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Debug::fmt(&**self, f)
-    }
-}
-
-impl<T> Drop for StaticVec<T> {
-    fn drop(&mut self) {
-        unsafe {
-            for i in 0..self.len {
-                std::ptr::drop_in_place(self.as_mut_ptr().add(i));
-            }
-            dealloc(self.ptr.as_ptr() as *mut u8, Layout::array::<T>(self.len).unwrap_or_else(|_| panic!("Length of {} not valid!", self.len)));
-        }
-    }
-}
-
-pub struct StaticVecIter<'a, T> {
-    vec: &'a StaticVec<T>,
-    index: usize
-}
-
-impl<'a, T> Iterator for StaticVecIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let next = self.vec.get(self.index);
-        self.index += 1;
-        next
-    }
-}
-
-pub struct StaticVecIterMut<'a, T> {
-    vec: &'a mut StaticVec<T>,
-    index: usize
-}
-
-impl<'a, T> Iterator for StaticVecIterMut<'a, T> {
-    type Item = &'a mut T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.vec.len {
-            return None;
-        }
-        let next = &mut self.vec[self.index];
-        self.index += 1;
-        Some(unsafe { (next as *mut T).as_mut().unwrap() })
-    }
-}
-
-pub struct StaticVecIntoIter<T> {
-    vec: StaticVec<T>,
-    index: usize
-}
-
-impl<T> Iterator for StaticVecIntoIter<T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        if self.index == self.vec.len {
-            None
-        }
-        else {
-            unsafe {
-                let next = self.vec.ptr.as_ptr().add(self.index).read();
-                self.index += 1;
-                Some(next)
-            }
-        }
     }
 }
