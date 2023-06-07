@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::ops::Range;
+use std::panic::PanicInfo;
 use std::sync::{LockResult, Mutex};
 use std::time::*;
 use num_traits::One;
@@ -639,5 +640,47 @@ pub trait Recover<T> {
 impl<T> Recover<T> for LockResult<T> {
     fn recover(self) -> T {
         self.unwrap_or_else(|r| r.into_inner())
+    }
+}
+
+pub enum PanicStyle {
+    Normal,
+    ForceExit,
+    Abort
+}
+
+pub fn setup_private_panic(panic_style: Option<PanicStyle>) {
+    std::panic::set_hook(Box::new(match panic_style {
+        Some(PanicStyle::ForceExit) => panic_force,
+        Some(PanicStyle::Abort) => panic_abort,
+        _ => panic
+    }));
+}
+
+pub fn setup_private_panic_default() {}
+
+fn panic_force(info: &PanicInfo) {
+    panic(info);
+    std::process::exit(1)
+}
+
+fn panic_abort(info: &PanicInfo) {
+    panic(info);
+    std::process::abort()
+}
+
+fn panic(info: &PanicInfo) {
+    let thread = std::thread::current().name().unwrap_or("unknown").to_string();
+    if let Some(message) = info.payload().downcast_ref::<&'static str>() {
+        println!("Thread '{}' panicked with message '{}'", thread, message);
+    }
+    else if let Some(message) = info.payload().downcast_ref::<String>() {
+        println!("Thread '{}' panicked with message '{}'", thread, message);
+    }
+    else if let Some(message) = info.payload().downcast_ref::<std::fmt::Arguments>() {
+        println!("Thread '{}' panicked with message '{}'", thread, message);
+    }
+    else {
+        println!("Thread '{}' panicked", thread);
     }
 }
