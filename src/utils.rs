@@ -657,7 +657,9 @@ pub fn setup_private_panic(panic_style: Option<PanicStyle>) {
     }));
 }
 
-pub fn setup_private_panic_default() {}
+pub fn setup_private_panic_default() {
+    setup_private_panic(None)
+}
 
 fn panic_force(info: &PanicInfo) {
     panic(info);
@@ -683,4 +685,19 @@ fn panic(info: &PanicInfo) {
     else {
         println!("Thread '{}' panicked", thread);
     }
+}
+
+
+pub fn key(mut n: u32) -> String {
+    let mut result = String::new();
+    loop {
+        let remainder = (n % 26) as u8;
+        result.push(('a' as u8 + remainder) as char);
+        n /= 26;
+        if n == 0 {
+            break;
+        }
+        n -= 1;
+    }
+    result.chars().rev().collect()
 }
