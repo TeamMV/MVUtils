@@ -692,7 +692,7 @@ pub fn key(mut n: u32) -> String {
     let mut result = String::new();
     loop {
         let remainder = (n % 26) as u8;
-        result.push(('a' as u8 + remainder) as char);
+        result.push((b'a' + remainder) as char);
         n /= 26;
         if n == 0 {
             break;
