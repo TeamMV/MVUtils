@@ -2,6 +2,14 @@
 name = "mvutils"
 version = "1.0.0"
 edition = "2021"
+license-file = "LICENSE"
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+codegen-units = 1
+debug = false
 
 [dependencies]
 bytebuffer = "2.1.1"
