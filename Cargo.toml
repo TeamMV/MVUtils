@@ -3,6 +3,20 @@ name = "mvutils"
 version = "1.0.0"
 edition = "2021"
 license-file = "LICENSE"
+rust-version = "1.69.0"
+authors = [
+    "Maxim Savenkov",
+    "Julian Hohenhausen"
+]
+repository = "https://github.com/TeamMV/MVUtils"
+keywords = [
+    "utils",
+    "mvteam",
+    "mvutils"
+]
+categories = [
+    "utils"
+]
 
 [profile.release]
 opt-level = 3
