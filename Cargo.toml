@@ -17,6 +17,7 @@ keywords = [
 categories = [
     "utils"
 ]
+description = "A utility crate made from commonly used functions in my projects."
 
 [profile.release]
 opt-level = 3
