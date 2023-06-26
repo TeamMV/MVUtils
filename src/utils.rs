@@ -282,7 +282,10 @@ pub trait Verify {
 }
 
 #[macro_export]
-macro_rules! inner_sealable {
+macro_rules! sealable {
+    () => {
+        sealable!($);
+    };
     ($d:tt) => {
         use private::Sealed;
 
@@ -359,14 +362,6 @@ macro_rules! inner_sealable {
                 }
             };
         }
-    };
-}
-
-#[macro_export]
-macro_rules! sealable {
-    () => {
-        use $crate::inner_sealable;
-        inner_sealable!($);
     };
 }
 
