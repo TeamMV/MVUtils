@@ -142,3 +142,31 @@ impl Hash for Version {
         self.as_vulkan_version().hash(state);
     }
 }
+
+impl FromStr for Version {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Version::parse(s).ok_or(())
+    }
+}
+
+impl TryFrom<String> for Version {
+    type Error = ();
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Version::parse(&value).ok_or(())
+    }
+}
+
+impl From<u32> for Version {
+    fn from(value: u32) -> Self {
+        Version::parse_vulkan(value)
+    }
+}
+
+impl From<Version> for u32 {
+    fn from(value: Version) -> Self {
+        value.as_vulkan_version()
+    }
+}

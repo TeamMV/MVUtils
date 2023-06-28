@@ -4,7 +4,7 @@
 /// - `impl Iterator<Item = String>` - This will provide you with an iterator with heap allocated strings in it.
 /// - `impl Iterator<Item = &'static str>` - This will provide you with an iterator with the raw C strings in it as String slices.
 /// - `Vec<String>` - This will provide you with a vector of heap allocated strings.
-/// - `ArgSpecs` - This will provide an argument parser builder which will allow you to instantly parse the arguments.
+/// - `ArgParser` - This will provide an argument parser which will allow you to instantly parse the arguments.
 /// The function may also return an `i32` type, which will pass the return value to the C function.
 ///
 /// ```
@@ -23,6 +23,25 @@
 ///     }
 /// );
 /// ```
+///
+/// In this example, the program asks for an iterator over raw sting slices, which means no allocation is necessary, and it
+/// returns an `i32`, which is propagated and returned from the C entry point.
+///
+/// ```
+/// #![no_main]
+///
+/// use mvutils::cinit;
+/// use mvutils::args::ArgParser;
+///
+/// cinit!(
+///     pub fn main(args: ArgParser) {
+///         // do stuff with the parser
+///     }
+/// );
+/// ```
+///
+/// In this example, the program asks for an `ArgParser`, which is a struct from this crate. Unlike the previous example,
+/// this function doesn't return anything, so the C entry point will return 0.
 #[macro_export]
 macro_rules! cinit {
     (
@@ -103,12 +122,12 @@ macro_rules! cinit {
             }).collect::<Vec<_>>()
         }
     };
-    ($v:ident, $c:ident, ArgSpecs) => {
+    ($v:ident, $c:ident, ArgParser) => {
         {
             let arr = core::slice::from_raw_parts($v, $c as usize);
-            arr.iter().map(|arg| {
-                std::str::from_utf8_unchecked(std::ffi::CStr::from_ptr(*arg).to_bytes()).to_string()
-            }).parse_args()
+            $crate::args::ParseArgs::parse_args(arr.iter().map(|arg| {
+                std::str::from_utf8_unchecked(std::ffi::CStr::from_ptr(*arg).to_bytes())
+            }))
         }
     };
 }

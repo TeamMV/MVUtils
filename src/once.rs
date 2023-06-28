@@ -94,7 +94,6 @@ impl<T> InitOnce<T> {
         }
 
         let panicked = Arc::new(Mutex::new(Some(Ok(()))));
-        let clone = panicked.clone();
 
         self.once.call_once(|| {
             let result = catch_unwind(|| {
@@ -103,7 +102,7 @@ impl<T> InitOnce<T> {
             });
 
             if let Err(e) = result {
-                clone.lock().unwrap().replace(Err(InitError::Panicked(e)));
+                panicked.lock().unwrap().replace(Err(InitError::Panicked(e)));
             }
         });
         let res = panicked.lock().unwrap().take().unwrap();
@@ -209,7 +208,6 @@ impl<T> CreateOnce<T> {
         }
 
         let panicked = Arc::new(Mutex::new(Some(Ok(()))));
-        let clone = panicked.clone();
 
         self.once.call_once(|| {
             let result = catch_unwind(|| {
@@ -218,7 +216,7 @@ impl<T> CreateOnce<T> {
             });
 
             if let Err(e) = result {
-                clone.lock().unwrap().replace(Err(InitError::Panicked(e)));
+                panicked.lock().unwrap().replace(Err(InitError::Panicked(e)));
             }
         });
         let res = panicked.lock().unwrap().take().unwrap();
