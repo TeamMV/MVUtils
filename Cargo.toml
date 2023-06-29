@@ -1,6 +1,6 @@
 [package]
 name = "mvutils"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license-file = "LICENSE"
 rust-version = "1.69.0"
@@ -29,4 +29,4 @@ debug = false
 [dependencies]
 bytebuffer = "2.1.1"
 num-traits = "0.2.15"
-mvutils-proc-macro = { path = "./Proc" }
+mvutils-proc-macro = { path = "./Proc", version = "0.1.0" }
