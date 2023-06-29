@@ -1,9 +1,11 @@
+use crate::save::{Savable, Saver, Loader};
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
+use mvutils_proc_macro::Savable;
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Savable)]
 pub struct Version {
     major: u16,
     minor: u16,
@@ -139,7 +141,9 @@ impl PartialOrd for Version {
 
 impl Hash for Version {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.as_vulkan_version().hash(state);
+        state.write_u16(self.major);
+        state.write_u16(self.minor);
+        state.write_u16(self.patch);
     }
 }
 
