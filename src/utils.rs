@@ -158,9 +158,11 @@ impl<T> SplitInto for Vec<T> {
             return vec![self];
         }
 
+        let split_data_length = self.len() / n;
+
         let mut parts = Vec::with_capacity(n);
         for _ in 0..n {
-            parts.push(Vec::<T>::new());
+            parts.push(Vec::<T>::with_capacity(split_data_length + 1));
         }
 
         if n >= len {
@@ -172,7 +174,6 @@ impl<T> SplitInto for Vec<T> {
             return parts;
         }
 
-        let split_data_length = self.len() / n;
         let mut extra = self.len() % n;
         self.reverse();
 
