@@ -23,6 +23,12 @@ mod tests {
         c: String
     }
 
+    #[derive(Savable, Debug)]
+    struct B(i32, u32, String);
+
+    #[derive(Savable, Debug)]
+    struct C;
+
 
     #[test]
     fn it_works() {
@@ -35,7 +41,27 @@ mod tests {
         let mut buffer = ByteBuffer::new();
         a.save(&mut buffer);
         println!("{:?}", buffer.as_bytes());
-        let b = A::load(&mut buffer).unwrap();
+        let a = A::load(&mut buffer).unwrap();
+        println!("{:?}", a);
+
+        println!();
+
+        let b = B(1, 2, "hello".to_string());
         println!("{:?}", b);
+        let mut buffer = ByteBuffer::new();
+        b.save(&mut buffer);
+        println!("{:?}", buffer.as_bytes());
+        let b = B::load(&mut buffer).unwrap();
+        println!("{:?}", b);
+
+        println!();
+
+        let c = C;
+        println!("{:?}", c);
+        let mut buffer = ByteBuffer::new();
+        c.save(&mut buffer);
+        println!("{:?}", buffer.as_bytes());
+        let c = C::load(&mut buffer).unwrap();
+        println!("{:?}", c);
     }
 }
