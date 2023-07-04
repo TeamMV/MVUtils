@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Attribute, Meta, Field, FieldsNamed, FieldsUnnamed, Generics, Ident};
+use syn::{Attribute, Meta, Field, FieldsNamed, FieldsUnnamed, Generics, Ident, DataEnum, Fields};
+use syn::__private::Span;
 
 fn filter(f: &&Field) -> bool {
     !f.attrs.iter().any(is_unsaved)
@@ -126,4 +127,191 @@ pub fn unit(name: Ident, generics: Generics) -> TokenStream {
     };
 
     TokenStream::from(implementation)
+}
+
+pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream {
+    let save = e.variants.iter().enumerate().map(|(i, v)| {
+        let ident =  &v.ident;
+        match &v.fields {
+            Fields::Named(fields) => {
+                let names = fields.named.iter().map(|f| {
+                    let name = &f.ident;
+                    quote! {
+                        #name
+                    }
+                });
+
+                let (fields, _): (Vec<_>, Vec<_>) = fields.named.iter().partition(filter);
+
+                let saves = fields.iter().map(|f| {
+                    let name = &f.ident;
+                    quote! {
+                        Savable::save(#name, saver);
+                    }
+                });
+
+                quote! {
+                    #name::#ident { #( #names ),* } => {
+                        Savable::save(&(#i as u32), saver);
+                        #( #saves )*
+                    }
+                }
+            }
+            Fields::Unnamed(fields ) => {
+                let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.unnamed.iter().partition(filter);
+
+                if !unsaved_fields.is_empty() {
+                    panic!("Unnamed fields cannot be marked as unsaved!");
+                }
+
+                let names = fields.iter().enumerate().map(|(i, _)| {
+                    let key = key(i as u32);
+                    quote! {
+                        #key
+                    }
+                });
+
+                let saves = fields.iter().enumerate().map(|(i, _)| {
+                    let name = key(i as u32);
+                    quote! {
+                        Savable::save(#name, saver);
+                    }
+                });
+
+                quote! {
+                    #name::#ident( #( #names ),* ) => {
+                        Savable::save(&(#i as u32), saver);
+                        #( #saves )*
+                    },
+                }
+            }
+            Fields::Unit => {
+                quote! {
+                    #name::#ident => Savable::save(&(#i as u32), saver),
+                }
+            }
+        }
+    });
+
+    let load = e.variants.iter().enumerate().map(|(i, v)| {
+        let ident =  &v.ident;
+        let i = i as u32;
+        match &v.fields {
+            Fields::Named(fields) => {
+                let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.named.iter().partition(filter);
+
+                let names = fields.iter().map(|f| {
+                    let name = &f.ident;
+                    quote! {
+                        #name
+                    }
+                });
+
+                let load_fields = fields.iter().map(|f| {
+                    let name = &f.ident;
+                    let ty = &f.ty;
+                    quote! {
+                        let #name = <#ty as Savable>::load(loader)?;
+                    }
+                });
+
+                let load_default_fields = unsaved_fields.iter().map(|f| {
+                    let name = &f.ident;
+                    let ty = &f.ty;
+                    quote! {
+                        let #name = <#ty as Default>::default();
+                    }
+                });
+
+                let init_default_struct = unsaved_fields.iter().map(|f| {
+                    let name = &f.ident;
+                    quote! {
+                        #name
+                    }
+                });
+
+                quote! {
+                    #i => {
+                        #( #load_fields )*
+                        #( #load_default_fields )*
+
+                        Ok(#name::#ident {
+                            #( #names ),*,
+                            #( #init_default_struct ),*
+                        })
+                    }
+                }
+            }
+            Fields::Unnamed(fields ) => {
+                let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.unnamed.iter().partition(filter);
+
+                if !unsaved_fields.is_empty() {
+                    panic!("Unnamed fields cannot be marked as unsaved!");
+                }
+
+                let names = fields.iter().enumerate().map(|(i, _)| {
+                    let key = key(i as u32);
+                    quote! {
+                        #key
+                    }
+                });
+
+                let loads = fields.iter().enumerate().map(|(i, f)| {
+                    let name = key(i as u32);
+                    let ty = &f.ty;
+                    quote! {
+                        let #name = <#ty as Savable>::load(loader)?;
+                    }
+                });
+
+                quote! {
+                    #i => {
+                        #( #loads )*
+                        Ok(#name::#ident( #( #names ),* ))
+                    }
+                }
+            }
+            Fields::Unit => {
+                quote! {
+                    #i => Ok(#name::#ident),
+                }
+            }
+        }
+    });
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let implementation = quote! {
+        impl #impl_generics Savable for #name #ty_generics #where_clause {
+            fn save(&self, saver: &mut impl Saver) {
+                match self {
+                    #( #save )*
+                }
+            }
+
+            fn load(loader: &mut impl Loader) -> Result<Self, String> {
+                match u32::load(loader)? {
+                    #( #load )*
+                    _ => Err("Invalid enumerator value".to_string())
+                }
+            }
+        }
+    };
+
+    TokenStream::from(implementation)
+}
+
+fn key(mut n: u32) -> Ident {
+    let mut result = String::new();
+    loop {
+        let remainder = (n % 26) as u8;
+        result.push((b'a' + remainder) as char);
+        n /= 26;
+        if n == 0 {
+            break;
+        }
+        n -= 1;
+    }
+    let s = result.chars().rev().collect::<String>();
+    Ident::new_raw(&s, Span::call_site())
 }

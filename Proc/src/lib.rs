@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput, Fields, Data};
-use crate::savable::{named, unit, unnamed};
+use crate::savable::{enumerator, named, unit, unnamed};
 
 mod savable;
 
@@ -19,7 +19,7 @@ pub fn derive_savable(input: TokenStream) -> TokenStream {
                 Fields::Unit => unit(name, generics)
             }
         }
-        Data::Enum(_) => todo!("Enum savable generation is not supported yet!"),
+        Data::Enum(e) => enumerator(e, name, generics),
         Data::Union(_) => panic!("Deriving Savable for unions is not supported!")
     }
 }
