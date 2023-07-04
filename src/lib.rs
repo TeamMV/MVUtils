@@ -8,6 +8,7 @@ pub mod once;
 pub mod static_vec;
 pub mod args;
 pub mod cinit;
+pub mod group_step_by;
 
 #[cfg(test)]
 mod tests {
