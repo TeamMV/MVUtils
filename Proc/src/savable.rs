@@ -130,6 +130,15 @@ pub fn unit(name: Ident, generics: Generics) -> TokenStream {
 }
 
 pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream {
+    let len = e.variants.len();
+    let id_ty = if len < 256 {
+        quote! { u8 }
+    } else if len < 65536 {
+        quote! { u16 }
+    } else {
+        quote! { u32 }
+    };
+
     let save = e.variants.iter().enumerate().map(|(i, v)| {
         let ident =  &v.ident;
         match &v.fields {
@@ -152,7 +161,7 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
 
                 quote! {
                     #name::#ident { #( #names ),* } => {
-                        Savable::save(&(#i as u32), saver);
+                        Savable::save(&(#i as #id_ty), saver);
                         #( #saves )*
                     }
                 }
@@ -180,14 +189,14 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
 
                 quote! {
                     #name::#ident( #( #names ),* ) => {
-                        Savable::save(&(#i as u32), saver);
+                        Savable::save(&(#i as #id_ty), saver);
                         #( #saves )*
                     },
                 }
             }
             Fields::Unit => {
                 quote! {
-                    #name::#ident => Savable::save(&(#i as u32), saver),
+                    #name::#ident => Savable::save(&(#i as #id_ty), saver),
                 }
             }
         }
@@ -290,9 +299,9 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
             }
 
             fn load(loader: &mut impl Loader) -> Result<Self, String> {
-                match u32::load(loader)? {
+                match #id_ty::load(loader)? as u32 {
                     #( #load )*
-                    _ => Err("Invalid enumerator value".to_string())
+                    _ => Err("Invalid enum id".to_string())
                 }
             }
         }
