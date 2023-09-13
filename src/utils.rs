@@ -4,7 +4,7 @@ use std::ops::Range;
 use std::panic::PanicInfo;
 use std::sync::{LockResult, Mutex};
 use std::time::*;
-use num_traits::One;
+use num_traits::{Num, One};
 use crate::lazy;
 use crate::once::Lazy;
 
@@ -79,6 +79,16 @@ pub trait Percentage {
 }
 
 impl<T: From<f32> + Div<T, Output = T> + Mul<T, Output = T> + Copy> Percentage for T {
+    fn percentage(self, total: Self) -> Self {
+        self / total * 100.0.into()
+    }
+
+    fn value(self, total: Self) -> Self {
+        self / 100.0.into() * total
+    }
+}
+
+impl<T: Num> Percentage for T {
     fn percentage(self, total: Self) -> Self {
         self / total * 100.0.into()
     }

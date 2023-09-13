@@ -1,19 +1,19 @@
-pub mod utils;
-pub mod version;
-pub mod screen;
-pub mod save;
-pub mod unsafe_utils;
-pub mod print;
-pub mod once;
-pub mod static_vec;
 pub mod args;
 pub mod cinit;
+pub mod once;
+pub mod print;
+pub mod save;
+pub mod screen;
+pub mod static_vec;
+pub mod unsafe_utils;
+pub mod utils;
+pub mod version;
 
 #[cfg(test)]
 mod tests {
+    use crate::save::{Loader, Savable, Saver};
     use bytebuffer::ByteBuffer;
-    use mvutils_proc_macro::Savable;
-    use crate::save::{Saver, Loader, Savable};
+    use mvutils_proc_macro::{Savable, R};
 
     #[derive(Savable, Debug)]
     enum E {
@@ -23,10 +23,12 @@ mod tests {
             a: String,
             #[unsaved]
             b: u32,
-            c: i32
-        }
+            c: i32,
+        },
     }
 
+    #[R("/home/v22/Desktop/coding/rust/MVUtils/assets")]
+    struct R;
 
     #[test]
     fn it_works() {
@@ -34,14 +36,13 @@ mod tests {
         let e = E::C {
             a: "Hello".to_string(),
             b: 123,
-            c: -123
+            c: -123,
         };
+        let r = R {hello: 1};
         e.save(&mut buffer);
         println!("{:?}", buffer);
         let mut buffer = ByteBuffer::from_bytes(buffer.as_bytes());
         let e = E::load(&mut buffer).unwrap();
         println!("{:?}", e);
-
-
     }
 }
