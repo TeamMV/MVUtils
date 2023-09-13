@@ -13,7 +13,7 @@ pub mod version;
 mod tests {
     use crate::save::{Loader, Savable, Saver};
     use bytebuffer::ByteBuffer;
-    use mvutils_proc_macro::{Savable, R};
+    use mvutils_proc_macro::Savable;
 
     #[derive(Savable, Debug)]
     enum E {
@@ -27,9 +27,6 @@ mod tests {
         },
     }
 
-    #[R("/home/v22/Desktop/coding/rust/MVUtils/assets")]
-    struct R;
-
     #[test]
     fn it_works() {
         let mut buffer = ByteBuffer::new();
@@ -38,7 +35,6 @@ mod tests {
             b: 123,
             c: -123,
         };
-        let r = R {hello: 1};
         e.save(&mut buffer);
         println!("{:?}", buffer);
         let mut buffer = ByteBuffer::from_bytes(buffer.as_bytes());
