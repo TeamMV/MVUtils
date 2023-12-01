@@ -209,3 +209,46 @@ impl Savable for String {
         loader.pop_string().ok_or("Failed to load String from Loader!".to_string())
     }
 }
+
+impl<T: Savable> Savable for Option<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        match self {
+            None => saver.push_u8(0),
+            Some(t) => {
+                saver.push_u8(1);
+                t.save(saver);
+            }
+        }
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        match u8::load(loader)? {
+            0 => Ok(None),
+            1 => Ok(Some(T::load(loader)?)),
+            _ => Err("Failed to load Option from Loader!".to_string())
+        }
+    }
+}
+
+impl<T: Savable, E: Savable> Savable for Result<T, E> {
+    fn save(&self, saver: &mut impl Saver) {
+        match self {
+            Ok(t) => {
+                saver.push_u8(0);
+                t.save(saver);
+            },
+            Err(e) => {
+                saver.push_u8(1);
+                e.save(saver);
+            }
+        }
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        match u8::load(loader)? {
+            0 => Ok(Ok(T::load(loader)?)),
+            1 => Ok(Err(E::load(loader)?)),
+            _ => Err("Failed to load Result from Loader!".to_string())
+        }
+    }
+}

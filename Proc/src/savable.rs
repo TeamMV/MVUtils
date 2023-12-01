@@ -301,7 +301,7 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
             fn load(loader: &mut impl Loader) -> Result<Self, String> {
                 match #id_ty::load(loader)? as u32 {
                     #( #load )*
-                    _ => Err("Invalid enum id".to_string())
+                    _ => Err(format!("Failed to load {} from loader!", stringify!(#name)))
                 }
             }
         }
