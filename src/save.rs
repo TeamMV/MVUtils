@@ -157,9 +157,7 @@ impl Loader for ByteBuffer {
         self.read_f32().ok()
     }
 
-    fn pop_f64(&mut self) -> Option<f64> {
-        self.read_f64().ok()
-    }
+    fn pop_f64(&mut self) -> Option<f64> { self.read_f64().ok() }
 
     fn pop_string(&mut self) -> Option<String> {
         self.read_string().ok()
@@ -199,6 +197,16 @@ impl_savable_primitive!(
     f32, push_f32, pop_f32,
     f64, push_f64, pop_f64
 );
+
+impl Savable for bool {
+    fn save(&self, saver: &mut impl Saver) {
+        (*self as u8).save(saver)
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        Ok(u8::load(loader)? != 0)
+    }
+}
 
 impl Savable for String {
     fn save(&self, saver: &mut impl Saver) {
@@ -250,5 +258,23 @@ impl<T: Savable, E: Savable> Savable for Result<T, E> {
             1 => Ok(Err(E::load(loader)?)),
             _ => Err("Failed to load Result from Loader!".to_string())
         }
+    }
+}
+
+impl<T: Savable> Savable for Vec<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        saver.push_u64(self.len() as u64);
+        for t in self {
+            t.save(saver);
+        }
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let len = u64::load(loader)?;
+        let mut vec = Vec::with_capacity(len as usize);
+        for _ in 0..len {
+            vec.push(T::load(loader)?);
+        }
+        Ok(vec)
     }
 }
