@@ -1,5 +1,13 @@
+extern crate proc_macro;
+
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, DeriveInput, Fields, Data};
+use std::env::Args;
+use std::fs;
+use proc_macro2::Ident;
+use quote::__private::ext::RepToTokensExt;
+use quote::quote;
+use syn::{parse_macro_input, DeriveInput, Fields, Data, Meta, Attribute, parse_quote};
+use syn::token::{Struct, Token};
 use crate::savable::{enumerator, named, unit, unnamed};
 
 mod savable;
