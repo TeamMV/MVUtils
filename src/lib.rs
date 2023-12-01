@@ -9,6 +9,8 @@ pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
 
+pub use mvutils_proc_macro::Savable;
+
 #[cfg(test)]
 mod tests {
     use crate::save::{Loader, Savable, Saver};
