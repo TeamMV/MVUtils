@@ -88,16 +88,6 @@ impl<T: From<f32> + Div<T, Output = T> + Mul<T, Output = T> + Copy> Percentage f
     }
 }
 
-impl<T: Num> Percentage for T {
-    fn percentage(self, total: Self) -> Self {
-        self / total * 100.0.into()
-    }
-
-    fn value(self, total: Self) -> Self {
-        self / 100.0.into() * total
-    }
-}
-
 pub trait TetrahedronOp {
     fn yn<T>(self, yes: T, no: T) -> T;
 }
