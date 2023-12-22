@@ -129,231 +129,30 @@ impl<T: PartialEq> PartialEq for UnsafeRef<T> {
 
 impl<T: Eq> Eq for UnsafeRef<T> {}
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Default)]
 pub struct Nullable<T> {
-    ptr: *mut T,
-    drop: bool
+    val: Option<T>,
 }
 
 impl<T> Nullable<T> {
     pub fn new(value: T) -> Nullable<T> {
-        unsafe {
-            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
-            ptr.write(value);
-            Nullable {
-                ptr,
-                drop: true
-            }
+        Nullable {
+            val: Some(value)
         }
     }
 
     pub fn null() -> Nullable<T> {
         Nullable {
-            ptr: std::ptr::null_mut(),
-            drop: false
+            val: None
         }
     }
 
     pub fn zeroed() -> Nullable<T> {
         unsafe {
-            Nullable {
-                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T,
-                drop: true
-            }
-        }
-    }
-
-    pub fn is_null(&self) -> bool {
-        self.ptr.is_null()
-    }
-
-    pub fn replace(&mut self, value: T) {
-        unsafe {
-            if self.ptr.is_null() {
-                let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
-                ptr.write(value);
-                self.ptr = ptr;
-                self.drop = true;
-            } else {
-                self.ptr.write(value);
-            }
-        }
-    }
-
-    pub fn replace_null(&mut self) {
-        unsafe {
-            if !self.ptr.is_null() {
-                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
-                self.ptr = std::ptr::null_mut();
-                self.drop = false;
-            }
-        }
-    }
-
-    pub fn replace_zeroed(&mut self) {
-        unsafe {
-            if self.ptr.is_null() {
-                let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
-                self.ptr = ptr;
-                self.drop = true;
-            } else {
-                self.ptr.write_bytes(0, Layout::new::<T>().size());
-            }
-        }
-    }
-
-    pub fn take_replace(&mut self, value: T) -> T {
-        unsafe {
-            if self.ptr.is_null() {
-                panic!("Null pointer dereference!")
-            } else {
-                let val = self.ptr.read();
-                self.ptr.write(value);
-                val
-            }
-        }
-    }
-
-    pub fn take_replace_null(&mut self) -> T {
-        unsafe {
-            if !self.ptr.is_null() {
-                let val = self.ptr.read();
-                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
-                self.ptr = std::ptr::null_mut();
-                self.drop = false;
-                val
-            }
-            else {
-                panic!("Null pointer dereference!")
-            }
-        }
-    }
-
-    pub fn take_replace_zeroed(&mut self) -> T {
-        unsafe {
-            if self.ptr.is_null() {
-                panic!("Null pointer dereference!")
-            } else {
-                let val = self.ptr.read();
-                self.ptr.write_bytes(0, Layout::new::<T>().size());
-                val
-            }
-        }
-    }
-
-    pub fn extract(self) -> T {
-        unsafe {
-            std::ptr::read(self.ptr)
-        }
-    }
-
-    /// Leaks the [`Nullable<T>`], returning the pointer to the heap allocated value.
-    ///
-    /// # Safety
-    ///
-    /// This will return a null pointer if the [`Nullable<T>`] is null.
-    pub unsafe fn leak(self) -> *mut T {
-        self.ptr
-    }
-
-    /// Reinterpret the value at this pointer as another type. This does not cast, it just assumes
-    /// the bytes at the pointer are the same type and same length and alignment.
-    ///
-    /// # Safety
-    ///
-    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
-    /// and [`R`] have the same size and alignment.
-    pub unsafe fn cast_bytes<R>(self) -> Nullable<R> {
-        unsafe {
-            (&self as *const Self).cast_mut().as_mut().unwrap().drop = false;
-        }
-        Nullable {
-            ptr: self.ptr as *mut R,
-            drop: true
-        }
-    }
-}
-
-impl<T> Deref for Nullable<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        unsafe { self.ptr.as_ref().expect("Null pointer dereference! Check using Nullable::is_null() before dereferencing!") }
-    }
-}
-
-impl<T> DerefMut for Nullable<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        unsafe { self.ptr.as_mut().expect("Null pointer dereference! Check using Nullable::is_null() before dereferencing!") }
-    }
-}
-
-impl<T> Drop for Nullable<T> {
-    fn drop(&mut self) {
-        unsafe {
-            if self.drop && !self.ptr.is_null() {
-                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
-            }
-        }
-    }
-}
-
-impl<T: Display> Display for Nullable<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.is_null() {
-            f.write_str("null")
-        }
-        else {
-            self.deref().fmt(f)
-        }
-    }
-}
-
-impl<T: PartialEq> PartialEq for Nullable<T> {
-    fn eq(&self, other: &Self) -> bool {
-        if self.is_null() {
-            other.is_null()
-        }
-        else if other.is_null() {
-            false
-        }
-        else {
-            self.deref() == other.deref()
-        }
-    }
-}
-
-impl<T: Eq> Eq for Nullable<T> {}
-
-impl<T> From<T> for Nullable<T> {
-    fn from(value: T) -> Nullable<T> {
-        Nullable::new(value)
-    }
-}
-
-#[derive(Debug)]
-pub struct StackNullable<T> {
-    val: Option<T>,
-}
-
-impl<T> StackNullable<T> {
-    pub fn new(value: T) -> StackNullable<T> {
-        StackNullable {
-            val: Some(value)
-        }
-    }
-
-    pub fn null() -> StackNullable<T> {
-        StackNullable {
-            val: None
-        }
-    }
-
-    pub fn zeroed() -> StackNullable<T> {
-        unsafe {
             let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
             let val = ptr.read();
             std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
-            StackNullable {
+            Nullable {
                 val: Some(val)
             }
         }
@@ -402,20 +201,20 @@ impl<T> StackNullable<T> {
     }
 }
 
-impl<T> Deref for StackNullable<T> {
+impl<T> Deref for Nullable<T> {
     type Target = T;
     fn deref(&self) -> &T {
         self.val.as_ref().expect("Null pointer dereference! Check using StackNullable::is_null() before dereferencing!")
     }
 }
 
-impl<T> DerefMut for StackNullable<T> {
+impl<T> DerefMut for Nullable<T> {
     fn deref_mut(&mut self) -> &mut T {
         self.val.as_mut().expect("Null pointer dereference! Check using StackNullable::is_null() before dereferencing!")
     }
 }
 
-impl<T: Display> Display for StackNullable<T> {
+impl<T: Display> Display for Nullable<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.is_null() {
             f.write_str("null")
@@ -426,171 +225,17 @@ impl<T: Display> Display for StackNullable<T> {
     }
 }
 
-impl<T: PartialEq> PartialEq for StackNullable<T> {
-    fn eq(&self, other: &Self) -> bool {
-        if self.is_null() {
-            other.is_null()
-        }
-        else if other.is_null() {
-            false
-        }
-        else {
-            self.deref() == other.deref()
-        }
+impl<T> From<T> for Nullable<T> {
+    fn from(value: T) -> Nullable<T> {
+        Nullable::new(value)
     }
 }
 
-impl<T: Eq> Eq for StackNullable<T> {}
-
-impl<T> From<T> for StackNullable<T> {
-    fn from(value: T) -> StackNullable<T> {
-        StackNullable::new(value)
-    }
-}
-
-#[derive(Debug)]
-pub struct NullableRc<T> {
-    ptr: *const T,
-    ref_count: *mut usize,
-}
-
-impl<T> NullableRc<T> {
-    pub fn new(value: T) -> NullableRc<T> {
-        unsafe {
-            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
-            ptr.write(value);
-            let ptr = ptr as *const T;
-            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
-            ref_count.write(1);
-            NullableRc {
-                ptr,
-                ref_count,
-            }
+impl<T> From<Option<T>> for Nullable<T> {
+    fn from(value: Option<T>) -> Self {
+        Nullable {
+            val: value,
         }
-    }
-
-    pub fn null() -> NullableRc<T> {
-        unsafe {
-            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
-            ref_count.write(1);
-            NullableRc {
-                ptr: std::ptr::null_mut(),
-                ref_count,
-            }
-        }
-    }
-
-    pub fn zeroed() -> NullableRc<T> {
-        unsafe {
-            let ref_count = std::alloc::alloc(Layout::new::<usize>()) as *mut usize;
-            ref_count.write(1);
-            NullableRc {
-                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *const T,
-                ref_count,
-            }
-        }
-    }
-
-    pub fn same_as(&self, other: &Self) -> bool {
-        self.ptr == other.ptr
-    }
-
-    pub fn is_null(&self) -> bool {
-        self.ptr.is_null()
-    }
-
-    pub fn ref_count(&self) -> usize {
-        unsafe { *self.ref_count }
-    }
-
-    pub fn extract(self) -> T {
-        if self.ref_count() > 1 {
-            panic!("Cannot extract a NullableRc with more than one living reference!");
-        }
-        unsafe {
-            std::ptr::read(self.ptr)
-        }
-    }
-
-    /// Reinterpret the value at this pointer as another type. This does not cast, it just assumes
-    /// the bytes at the pointer are the same type and same length and alignment.
-    ///
-    /// # Safety
-    ///
-    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
-    /// and [`R`] have the same size and alignment.
-    pub unsafe fn cast_bytes<R>(&self) -> NullableRc<R> {
-        *self.ref_count += 1;
-        NullableRc {
-            ptr: self.ptr as *mut R,
-            ref_count: self.ref_count,
-        }
-    }
-}
-
-impl<T> Deref for NullableRc<T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        unsafe { self.ptr.as_ref().expect("Null pointer dereference! Check using Nullable::is_null() before dereferencing!") }
-    }
-}
-
-impl<T> Clone for NullableRc<T> {
-    fn clone(&self) -> NullableRc<T> {
-        unsafe {
-            *self.ref_count += 1;
-            NullableRc {
-                ptr: self.ptr,
-                ref_count: self.ref_count,
-            }
-        }
-    }
-}
-
-impl<T> Drop for NullableRc<T> {
-    fn drop(&mut self) {
-        unsafe {
-            if *self.ref_count == 1 {
-                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
-                std::alloc::dealloc(self.ref_count as *mut u8, Layout::new::<usize>());
-            }
-            else {
-                *self.ref_count -= 1;
-            }
-        }
-    }
-}
-
-impl<T: Display> Display for NullableRc<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.is_null() {
-            f.write_str("null")
-        }
-        else {
-            self.deref().fmt(f)
-        }
-    }
-}
-
-impl<T: PartialEq> PartialEq for NullableRc<T> {
-    fn eq(&self, other: &Self) -> bool {
-        if self.is_null() {
-            other.is_null()
-        }
-        else if other.is_null() {
-            false
-        }
-        else {
-            self.deref() == other.deref()
-        }
-    }
-}
-
-impl<T: Eq> Eq for NullableRc<T> {}
-
-impl<T> From<T> for NullableRc<T> {
-    fn from(value: T) -> NullableRc<T> {
-        NullableRc::new(value)
     }
 }
 

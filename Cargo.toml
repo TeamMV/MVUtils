@@ -1,6 +1,6 @@
 [package]
 name = "mvutils"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 license-file = "LICENSE"
 rust-version = "1.69.0"
@@ -13,9 +13,6 @@ keywords = [
     "utils",
     "mvteam",
     "mvutils"
-]
-categories = [
-    "utils"
 ]
 description = "A utility crate made from commonly used functions in my projects."
 

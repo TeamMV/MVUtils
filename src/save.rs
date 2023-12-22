@@ -2,6 +2,7 @@ use bytebuffer::ByteBuffer;
 
 pub trait Saver {
     fn push_bytes(&mut self, bytes: &[u8]);
+    fn push_bool(&mut self, bool: bool);
     fn push_u8(&mut self, value: u8);
     fn push_u16(&mut self, value: u16);
     fn push_u32(&mut self, value: u32);
@@ -19,6 +20,10 @@ pub trait Loader {
     fn pop_bytes(&mut self, amount: usize) -> Option<Vec<u8>>;
     fn pop_bytes_unchecked(&mut self, amount: usize) -> Vec<u8> {
         self.pop_bytes(amount).unwrap()
+    }
+    fn pop_bool(&mut self) -> Option<bool>;
+    fn pop_bool_unchecked(&mut self) -> bool {
+        self.pop_bool().unwrap()
     }
     fn pop_u8(&mut self) -> Option<u8>;
     fn pop_u8_unchecked(&mut self) -> u8 {
@@ -71,6 +76,10 @@ impl Saver for ByteBuffer {
         self.write_bytes(bytes);
     }
 
+    fn push_bool(&mut self, bool: bool) {
+        self.write_bit(bool);
+    }
+
     fn push_u8(&mut self, value: u8) {
         self.write_u8(value);
     }
@@ -119,6 +128,10 @@ impl Saver for ByteBuffer {
 impl Loader for ByteBuffer {
     fn pop_bytes(&mut self, amount: usize) -> Option<Vec<u8>> {
         self.read_bytes(amount).ok()
+    }
+
+    fn pop_bool(&mut self) -> Option<bool> {
+        self.read_bit().ok()
     }
 
     fn pop_u8(&mut self) -> Option<u8> {
@@ -186,6 +199,7 @@ macro_rules! impl_savable_primitive {
 }
 
 impl_savable_primitive!(
+    bool, push_bool, pop_bool,
     u8, push_u8, pop_u8,
     u16, push_u16, pop_u16,
     u32, push_u32, pop_u32,
@@ -197,16 +211,6 @@ impl_savable_primitive!(
     f32, push_f32, pop_f32,
     f64, push_f64, pop_f64
 );
-
-impl Savable for bool {
-    fn save(&self, saver: &mut impl Saver) {
-        (*self as u8).save(saver)
-    }
-
-    fn load(loader: &mut impl Loader) -> Result<Self, String> {
-        Ok(u8::load(loader)? != 0)
-    }
-}
 
 impl Savable for String {
     fn save(&self, saver: &mut impl Saver) {
@@ -276,5 +280,16 @@ impl<T: Savable> Savable for Vec<T> {
             vec.push(T::load(loader)?);
         }
         Ok(vec)
+    }
+}
+
+impl Savable for ByteBuffer {
+    fn save(&self, saver: &mut impl Saver) {
+        saver.push_u64(self.len() as u64);
+        saver.push_bytes(self.as_bytes());
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        Vec::<u8>::load(loader).map(Into::into)
     }
 }

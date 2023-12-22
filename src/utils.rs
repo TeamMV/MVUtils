@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::ops::Range;
 use std::panic::PanicInfo;
-use std::sync::{LockResult, Mutex};
+use std::sync::{Arc, LockResult, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::*;
-use num_traits::{Num, One};
+use num_traits::One;
 use crate::lazy;
 use crate::once::Lazy;
 
@@ -204,6 +204,16 @@ impl Time for u128 {
 
     fn time_nanos() -> Self {
         SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_else(|e| panic!("System clock error: Time elapsed of -{}ns is not valid!", e.duration().as_nanos())).as_nanos()
+    }
+}
+
+impl Time for u64 {
+    fn time_millis() -> Self {
+        u128::time_millis() as u64
+    }
+
+    fn time_nanos() -> Self {
+        u128::time_nanos() as u64
     }
 }
 
@@ -638,6 +648,23 @@ impl<T> Recover<T> for LockResult<T> {
         self.unwrap_or_else(|r| r.into_inner())
     }
 }
+
+pub trait RwUnchecked<T> {
+    fn read_unchecked(&self) -> RwLockReadGuard<T>;
+    fn write_unchecked(&self) -> RwLockWriteGuard<T>;
+}
+
+impl<T> RwUnchecked<T> for RwLock<T> {
+    fn read_unchecked(&self) -> RwLockReadGuard<T> {
+        self.read().recover()
+    }
+
+    fn write_unchecked(&self) -> RwLockWriteGuard<T> {
+        self.write().recover()
+    }
+}
+
+pub type RwArc<T> = Arc<RwLock<T>>;
 
 pub enum PanicStyle {
     Normal,

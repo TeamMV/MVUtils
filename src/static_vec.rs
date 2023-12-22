@@ -1,11 +1,9 @@
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
-use std::slice::{Iter, IterMut};
 use std::vec::IntoIter;
-use crate::unsafe_utils::Nullable;
 
 pub struct StaticVec<T> {
-    vec: Vec<Nullable<T>>,
+    vec: Vec<Option<T>>,
     len: usize,
 }
 
@@ -18,16 +16,16 @@ impl<T: Default + Clone> StaticVec<T> {
 impl<T> StaticVec<T> {
     pub fn new(len: usize) -> Self {
         StaticVec {
-            vec: vec![0; len].into_iter().map(|_| Nullable::null()).collect(),
+            vec: vec![0; len].into_iter().map(|_| None).collect(),
             len
         }
     }
 
-    pub fn as_ptr(&self) -> *const Nullable<T> {
+    pub fn as_ptr(&self) -> *const Option<T> {
         self.vec.as_ptr()
     }
 
-    pub fn as_mut_ptr(&mut self) -> *mut Nullable<T> {
+    pub fn as_mut_ptr(&mut self) -> *mut Option<T> {
         self.vec.as_mut_ptr()
     }
 
@@ -39,60 +37,42 @@ impl<T> StaticVec<T> {
         self.len == 0
     }
 
-    pub fn get(&self, index: usize) -> Option<&Nullable<T>> {
-        self.vec.get(index)
+    pub fn get(&self, index: usize) -> Option<&T> {
+        self.vec.get(index).map(|a| a.as_ref()).unwrap_or(None)
     }
 
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut Nullable<T>> {
-        self.vec.get_mut(index)
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        self.vec.get_mut(index).map(|a| a.as_mut()).unwrap_or(None)
     }
 
     pub fn set(&mut self, index: usize, value: T) {
         if index >= self.len {
             panic!("Index {index} out of bounds for length {}!", self.len);
         }
-        self.vec[index] = Nullable::new(value);
+        self.vec[index] = Some(value);
     }
 
-    pub fn iter(&self) -> Iter<Nullable<T>> {
-        self.vec.iter()
+    pub fn iter(&self) -> impl Iterator<Item = Option<&T>> {
+        self.vec.iter().map(|t| t.as_ref())
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<Nullable<T>> {
-        self.vec.iter_mut()
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = Option<&mut T>> {
+        self.vec.iter_mut().map(|t| t.as_mut())
     }
 }
 
 impl<T> IntoIterator for StaticVec<T> {
-    type Item = Nullable<T>;
-    type IntoIter = IntoIter<Nullable<T>>;
+    type Item = Option<T>;
+    type IntoIter = IntoIter<Option<T>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.vec.into_iter()
     }
 }
 
-impl<'a, T> IntoIterator for &'a StaticVec<T> {
-    type Item = &'a Nullable<T>;
-    type IntoIter = Iter<'a, Nullable<T>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-impl<'a, T> IntoIterator for &'a mut StaticVec<T> {
-    type Item = &'a mut Nullable<T>;
-    type IntoIter = IterMut<'a, Nullable<T>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
-    }
-}
-
 impl<T> FromIterator<T> for StaticVec<T> {
     fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
-        let vec = iter.into_iter().map(|v| Nullable::new(v)).collect::<Vec<_>>();
+        let vec = iter.into_iter().map(|v| Some(v)).collect::<Vec<_>>();
         let len = vec.len();
         StaticVec {
             vec,
@@ -101,8 +81,8 @@ impl<T> FromIterator<T> for StaticVec<T> {
     }
 }
 
-impl<T> FromIterator<Nullable<T>> for StaticVec<T> {
-    fn from_iter<I: IntoIterator<Item=Nullable<T>>>(iter: I) -> Self {
+impl<T> FromIterator<Option<T>> for StaticVec<T> {
+    fn from_iter<I: IntoIterator<Item=Option<T>>>(iter: I) -> Self {
         let vec = iter.into_iter().collect::<Vec<_>>();
         let len = vec.len();
         StaticVec {
@@ -114,7 +94,7 @@ impl<T> FromIterator<Nullable<T>> for StaticVec<T> {
 
 impl<T> From<Vec<T>> for StaticVec<T> {
     fn from(vec: Vec<T>) -> Self {
-        let vec = vec.into_iter().map(|v| Nullable::new(v)).collect::<Vec<_>>();
+        let vec = vec.into_iter().map(|v| Some(v)).collect::<Vec<_>>();
         let len = vec.len();
         StaticVec {
             vec,
@@ -123,8 +103,8 @@ impl<T> From<Vec<T>> for StaticVec<T> {
     }
 }
 
-impl<T> From<Vec<Nullable<T>>> for StaticVec<T> {
-    fn from(vec: Vec<Nullable<T>>) -> Self {
+impl<T> From<Vec<Option<T>>> for StaticVec<T> {
+    fn from(vec: Vec<Option<T>>) -> Self {
         let vec = vec.into_iter().collect::<Vec<_>>();
         let len = vec.len();
         StaticVec {
@@ -139,7 +119,7 @@ impl<T: Clone> From<&[T]> for StaticVec<T> {
         let len = slice.len();
         let mut vec = StaticVec::new(len);
         for (i, t) in slice.iter().enumerate() {
-            vec[i] = Nullable::new(t.clone());
+            vec[i] = Some(t.clone());
         }
         vec
     }
@@ -150,17 +130,17 @@ impl<T: Clone> From<&mut [T]> for StaticVec<T> {
         let len = slice.len();
         let mut vec = StaticVec::new(len);
         for (i, t) in slice.iter().enumerate() {
-            vec[i] = Nullable::new(t.clone());
+            vec[i] = Some(t.clone());
         }
         vec
     }
 }
 
 impl<T> Deref for StaticVec<T> {
-    type Target = [Nullable<T>];
+    type Target = [Option<T>];
 
     #[inline]
-    fn deref(&self) -> &[Nullable<T>] {
+    fn deref(&self) -> &[Option<T>] {
         &self.vec
     }
 }
@@ -174,7 +154,7 @@ impl<T> DerefMut for StaticVec<T> {
 }
 
 impl<T> Index<usize> for StaticVec<T> {
-    type Output = Nullable<T>;
+    type Output = Option<T>;
 
     fn index(&self, index: usize) -> &Self::Output {
         if index >= self.len {
