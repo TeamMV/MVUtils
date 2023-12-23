@@ -129,6 +129,208 @@ impl<T: PartialEq> PartialEq for UnsafeRef<T> {
 
 impl<T: Eq> Eq for UnsafeRef<T> {}
 
+#[derive(Debug)]
+pub struct HeapNullable<T> {
+    ptr: *mut T,
+    drop: bool
+}
+
+impl<T> HeapNullable<T> {
+    pub fn new(value: T) -> HeapNullable<T> {
+        unsafe {
+            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+            ptr.write(value);
+            HeapNullable {
+                ptr,
+                drop: true
+            }
+        }
+    }
+
+    pub fn null() -> HeapNullable<T> {
+        HeapNullable {
+            ptr: std::ptr::null_mut(),
+            drop: false
+        }
+    }
+
+    pub fn zeroed() -> HeapNullable<T> {
+        unsafe {
+            HeapNullable {
+                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T,
+                drop: true
+            }
+        }
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.ptr.is_null()
+    }
+
+    pub fn replace(&mut self, value: T) {
+        unsafe {
+            if self.ptr.is_null() {
+                let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
+                ptr.write(value);
+                self.ptr = ptr;
+                self.drop = true;
+            } else {
+                self.ptr.write(value);
+            }
+        }
+    }
+
+    pub fn replace_null(&mut self) {
+        unsafe {
+            if !self.ptr.is_null() {
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+                self.ptr = std::ptr::null_mut();
+                self.drop = false;
+            }
+        }
+    }
+
+    pub fn replace_zeroed(&mut self) {
+        unsafe {
+            if self.ptr.is_null() {
+                let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+                self.ptr = ptr;
+                self.drop = true;
+            } else {
+                self.ptr.write_bytes(0, Layout::new::<T>().size());
+            }
+        }
+    }
+
+    pub fn take_replace(&mut self, value: T) -> T {
+        unsafe {
+            if self.ptr.is_null() {
+                panic!("Null pointer dereference!")
+            } else {
+                let val = self.ptr.read();
+                self.ptr.write(value);
+                val
+            }
+        }
+    }
+
+    pub fn take_replace_null(&mut self) -> T {
+        unsafe {
+            if !self.ptr.is_null() {
+                let val = self.ptr.read();
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+                self.ptr = std::ptr::null_mut();
+                self.drop = false;
+                val
+            }
+            else {
+                panic!("Null pointer dereference!")
+            }
+        }
+    }
+
+    pub fn take_replace_zeroed(&mut self) -> T {
+        unsafe {
+            if self.ptr.is_null() {
+                panic!("Null pointer dereference!")
+            } else {
+                let val = self.ptr.read();
+                self.ptr.write_bytes(0, Layout::new::<T>().size());
+                val
+            }
+        }
+    }
+
+    pub fn extract(self) -> T {
+        unsafe {
+            std::ptr::read(self.ptr)
+        }
+    }
+
+    /// Leaks the [`HeapNullable<T>`], returning the pointer to the heap allocated value.
+    ///
+    /// # Safety
+    ///
+    /// This will return a null pointer if the [`HeapNullable<T>`] is null.
+    pub unsafe fn leak(mut self) -> *mut T {
+        self.drop = false;
+        self.ptr
+    }
+
+    /// Reinterpret the value at this pointer as another type. This does not cast, it just assumes
+    /// the bytes at the pointer are the same type and same length and alignment.
+    ///
+    /// # Safety
+    ///
+    /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
+    /// and [`R`] have the same size and alignment.
+    pub unsafe fn cast_bytes<R>(self) -> HeapNullable<R> {
+        unsafe {
+            (&self as *const Self).cast_mut().as_mut().unwrap().drop = false;
+        }
+        HeapNullable {
+            ptr: self.ptr as *mut R,
+            drop: true
+        }
+    }
+}
+
+impl<T> Deref for HeapNullable<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        unsafe { self.ptr.as_ref().expect("Null pointer dereference! Check using HeapNullable::is_null() before dereferencing!") }
+    }
+}
+
+impl<T> DerefMut for HeapNullable<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe { self.ptr.as_mut().expect("Null pointer dereference! Check using HeapNullable::is_null() before dereferencing!") }
+    }
+}
+
+impl<T> Drop for HeapNullable<T> {
+    fn drop(&mut self) {
+        unsafe {
+            if self.drop && !self.ptr.is_null() {
+                std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
+            }
+        }
+    }
+}
+
+impl<T: Display> Display for HeapNullable<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.is_null() {
+            f.write_str("null")
+        }
+        else {
+            self.deref().fmt(f)
+        }
+    }
+}
+
+impl<T: PartialEq> PartialEq for HeapNullable<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.is_null() {
+            other.is_null()
+        }
+        else if other.is_null() {
+            false
+        }
+        else {
+            self.deref() == other.deref()
+        }
+    }
+}
+
+impl<T: Eq> Eq for HeapNullable<T> {}
+
+impl<T> From<T> for HeapNullable<T> {
+    fn from(value: T) -> HeapNullable<T> {
+        HeapNullable::new(value)
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Default)]
 pub struct Nullable<T> {
     val: Option<T>,
