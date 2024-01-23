@@ -1,11 +1,14 @@
 use std::any::Any;
-use std::sync::{Once, atomic::{AtomicBool, Ordering}, Mutex, Arc};
-use std::ops::{Deref, DerefMut};
 use std::cell::UnsafeCell;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::ops::{Deref, DerefMut};
 use std::panic;
 use std::panic::{catch_unwind, RefUnwindSafe, UnwindSafe};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex, Once,
+};
 
 #[derive(Debug, Default)]
 pub struct AlreadyInitialized;
@@ -20,7 +23,7 @@ impl Error for AlreadyInitialized {}
 
 pub enum InitError {
     AlreadyInitialized(AlreadyInitialized),
-    Panicked(Box<dyn Any + Send +'static>)
+    Panicked(Box<dyn Any + Send + 'static>),
 }
 
 pub struct InitOnce<T> {
@@ -42,7 +45,10 @@ impl<T> InitOnce<T> {
         self.init_called.load(Ordering::Relaxed)
     }
 
-    pub fn init<F>(&self, f: F) where F: FnOnce(&mut T) {
+    pub fn init<F>(&self, f: F)
+    where
+        F: FnOnce(&mut T),
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             panic!("InitOnce::init called twice");
         }
@@ -53,7 +59,10 @@ impl<T> InitOnce<T> {
         });
     }
 
-    pub fn safe_init<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>> where F: FnOnce(&mut T) + UnwindSafe {
+    pub fn safe_init<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>>
+    where
+        F: FnOnce(&mut T) + UnwindSafe,
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             panic!("InitOnce::init called twice");
         }
@@ -75,7 +84,10 @@ impl<T> InitOnce<T> {
         res
     }
 
-    pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce(&mut T) {
+    pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized>
+    where
+        F: FnOnce(&mut T),
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             return Err(AlreadyInitialized);
         }
@@ -88,7 +100,10 @@ impl<T> InitOnce<T> {
         Ok(())
     }
 
-    pub fn try_safe_init<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce(&mut T) + UnwindSafe {
+    pub fn try_safe_init<F>(&self, f: F) -> Result<(), InitError>
+    where
+        F: FnOnce(&mut T) + UnwindSafe,
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             return Err(InitError::AlreadyInitialized(AlreadyInitialized));
         }
@@ -102,7 +117,10 @@ impl<T> InitOnce<T> {
             });
 
             if let Err(e) = result {
-                panicked.lock().unwrap().replace(Err(InitError::Panicked(e)));
+                panicked
+                    .lock()
+                    .unwrap()
+                    .replace(Err(InitError::Panicked(e)));
             }
         });
         let res = panicked.lock().unwrap().take().unwrap();
@@ -156,7 +174,10 @@ impl<T> CreateOnce<T> {
         self.init_called.load(Ordering::Relaxed)
     }
 
-    pub fn create<F>(&self, f: F) where F: FnOnce() -> T {
+    pub fn create<F>(&self, f: F)
+    where
+        F: FnOnce() -> T,
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             panic!("CreateOnce::create called twice");
         }
@@ -167,7 +188,10 @@ impl<T> CreateOnce<T> {
         });
     }
 
-    pub fn safe_create<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>> where F: FnOnce() -> T + UnwindSafe {
+    pub fn safe_create<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>>
+    where
+        F: FnOnce() -> T + UnwindSafe,
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             panic!("InitOnce::init called twice");
         }
@@ -189,7 +213,10 @@ impl<T> CreateOnce<T> {
         res
     }
 
-    pub fn try_create<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce() -> T {
+    pub fn try_create<F>(&self, f: F) -> Result<(), AlreadyInitialized>
+    where
+        F: FnOnce() -> T,
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             return Err(AlreadyInitialized);
         }
@@ -202,7 +229,10 @@ impl<T> CreateOnce<T> {
         Ok(())
     }
 
-    pub fn try_safe_create<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce() -> T + UnwindSafe {
+    pub fn try_safe_create<F>(&self, f: F) -> Result<(), InitError>
+    where
+        F: FnOnce() -> T + UnwindSafe,
+    {
         if self.init_called.swap(true, Ordering::SeqCst) {
             return Err(InitError::AlreadyInitialized(AlreadyInitialized));
         }
@@ -216,7 +246,10 @@ impl<T> CreateOnce<T> {
             });
 
             if let Err(e) = result {
-                panicked.lock().unwrap().replace(Err(InitError::Panicked(e)));
+                panicked
+                    .lock()
+                    .unwrap()
+                    .replace(Err(InitError::Panicked(e)));
             }
         });
         let res = panicked.lock().unwrap().take().unwrap();
@@ -242,7 +275,9 @@ impl<T> Deref for CreateOnce<T> {
             panic!("CreateOnce::deref called before CreateOnce::create");
         }
 
-        unsafe { self.value.get().as_ref().unwrap() }.as_ref().unwrap()
+        unsafe { self.value.get().as_ref().unwrap() }
+            .as_ref()
+            .unwrap()
     }
 }
 
@@ -252,7 +287,9 @@ impl<T> DerefMut for CreateOnce<T> {
             panic!("CreateOnce::deref called before CreateOnce::create");
         }
 
-        unsafe { self.value.get().as_mut().unwrap() }.as_mut().unwrap()
+        unsafe { self.value.get().as_mut().unwrap() }
+            .as_mut()
+            .unwrap()
     }
 }
 
@@ -268,14 +305,14 @@ impl<T> RefUnwindSafe for CreateOnce<T> {}
 
 pub struct Lazy<T> {
     value: CreateOnce<T>,
-    init: Mutex<Option<fn() -> T>>
+    init: Mutex<Option<fn() -> T>>,
 }
 
 impl<T> Lazy<T> {
     pub const fn new(f: fn() -> T) -> Self {
         Self {
             value: CreateOnce::new(),
-            init: Mutex::new(Some(f))
+            init: Mutex::new(Some(f)),
         }
     }
 
@@ -288,7 +325,7 @@ impl<T: Default> Lazy<T> {
     pub const fn default() -> Self {
         Self {
             value: CreateOnce::new(),
-            init: Mutex::new(Some(T::default))
+            init: Mutex::new(Some(T::default)),
         }
     }
 }
@@ -327,14 +364,14 @@ impl<T> RefUnwindSafe for Lazy<T> {}
 
 pub struct LazyInitOnce<T> {
     value: CreateOnce<InitOnce<T>>,
-    init: Mutex<Option<fn() -> T>>
+    init: Mutex<Option<fn() -> T>>,
 }
 
 impl<T> LazyInitOnce<T> {
     pub const fn new(f: fn() -> T) -> Self {
         Self {
             value: CreateOnce::new(),
-            init: Mutex::new(Some(f))
+            init: Mutex::new(Some(f)),
         }
     }
 
@@ -346,7 +383,10 @@ impl<T> LazyInitOnce<T> {
         self.value.initialized()
     }
 
-    pub fn init<F>(&self, f: F) where F: FnOnce(&mut T) {
+    pub fn init<F>(&self, f: F)
+    where
+        F: FnOnce(&mut T),
+    {
         let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(init) = init.take() {
             self.value.create(|| InitOnce::new(init()));
@@ -354,7 +394,10 @@ impl<T> LazyInitOnce<T> {
         self.value.init(f);
     }
 
-    pub fn safe_init<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>> where F: FnOnce(&mut T) + UnwindSafe {
+    pub fn safe_init<F>(&self, f: F) -> Result<(), Box<dyn Any + Send + 'static>>
+    where
+        F: FnOnce(&mut T) + UnwindSafe,
+    {
         let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(init) = init.take() {
             self.value.create(|| InitOnce::new(init()));
@@ -362,7 +405,10 @@ impl<T> LazyInitOnce<T> {
         self.value.safe_init(f)
     }
 
-    pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized> where F: FnOnce(&mut T) {
+    pub fn try_init<F>(&self, f: F) -> Result<(), AlreadyInitialized>
+    where
+        F: FnOnce(&mut T),
+    {
         let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(init) = init.take() {
             self.value.create(|| InitOnce::new(init()));
@@ -370,7 +416,10 @@ impl<T> LazyInitOnce<T> {
         self.value.try_init(f)
     }
 
-    pub fn try_safe_init<F>(&self, f: F) -> Result<(), InitError> where F: FnOnce(&mut T) + UnwindSafe {
+    pub fn try_safe_init<F>(&self, f: F) -> Result<(), InitError>
+    where
+        F: FnOnce(&mut T) + UnwindSafe,
+    {
         let mut init = self.init.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(init) = init.take() {
             self.value.create(|| InitOnce::new(init()));
@@ -383,7 +432,7 @@ impl<T: Default> LazyInitOnce<T> {
     pub const fn default() -> Self {
         Self {
             value: CreateOnce::new(),
-            init: Mutex::new(Some(T::default))
+            init: Mutex::new(Some(T::default)),
         }
     }
 }
@@ -392,7 +441,12 @@ impl<T> Deref for LazyInitOnce<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        if self.init.lock().unwrap_or_else(|e| e.into_inner()).is_some() {
+        if self
+            .init
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .is_some()
+        {
             panic!("InitOnce::deref called before InitOnce::init");
         }
         &self.value

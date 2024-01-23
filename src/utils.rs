@@ -1,12 +1,12 @@
+use crate::lazy;
+use crate::once::Lazy;
+use num_traits::One;
 use std::collections::HashMap;
-use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::ops::Range;
+use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::panic::PanicInfo;
 use std::sync::{Arc, LockResult, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::*;
-use num_traits::One;
-use crate::lazy;
-use crate::once::Lazy;
 
 pub trait Plural {
     fn plural(&self, count: u32) -> Self;
@@ -48,15 +48,15 @@ pub trait Overlap {
     fn overlap(self, min: Self, max: Self) -> Self;
 }
 
-impl<T: Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + One + Ord + Copy> Overlap for T {
+impl<T: Add<T, Output = T> + Sub<T, Output = T> + Rem<T, Output = T> + One + Ord + Copy> Overlap
+    for T
+{
     fn overlap(self, min: T, max: T) -> Self {
         if self > max {
             min + (self - max - T::one()) % (max - min + T::one())
-        }
-        else if self < min {
+        } else if self < min {
             max - (min - self - T::one()) % (max - min + T::one())
-        }
-        else {
+        } else {
             self
         }
     }
@@ -66,10 +66,21 @@ pub trait Map<T> {
     fn map(self, original: &Range<T>, target: &Range<T>) -> T;
 }
 
-impl<T: Add<T, Output = T> + Sub<T, Output = T> + Mul<T, Output = T> + Div<T, Output = T> + PartialOrd + Copy> Map<T> for T {
+impl<
+        T: Add<T, Output = T>
+            + Sub<T, Output = T>
+            + Mul<T, Output = T>
+            + Div<T, Output = T>
+            + PartialOrd
+            + Copy,
+    > Map<T> for T
+{
     fn map(self, original: &Range<T>, target: &Range<T>) -> T {
-        if self < original.start || self > original.end { return self }
-        ((self - original.start) * (target.end - target.start) / (original.end - original.start)) + target.start
+        if self < original.start || self > original.end {
+            return self;
+        }
+        ((self - original.start) * (target.end - target.start) / (original.end - original.start))
+            + target.start
     }
 }
 
@@ -94,7 +105,11 @@ pub trait TetrahedronOp {
 
 impl TetrahedronOp for bool {
     fn yn<T>(self, yes: T, no: T) -> T {
-        if self { yes } else { no }
+        if self {
+            yes
+        } else {
+            no
+        }
     }
 }
 
@@ -146,7 +161,9 @@ macro_rules! ret_err {
 }
 
 pub trait SplitInto {
-    fn split_into(self, n: usize) -> Vec<Self> where Self: Sized;
+    fn split_into(self, n: usize) -> Vec<Self>
+    where
+        Self: Sized;
 }
 
 impl<T> SplitInto for Vec<T> {
@@ -199,11 +216,27 @@ pub trait Time {
 
 impl Time for u128 {
     fn time_millis() -> Self {
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_else(|e| panic!("System clock error: Time elapsed of -{}ms is not valid!", e.duration().as_millis())).as_millis()
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "System clock error: Time elapsed of -{}ms is not valid!",
+                    e.duration().as_millis()
+                )
+            })
+            .as_millis()
     }
 
     fn time_nanos() -> Self {
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_else(|e| panic!("System clock error: Time elapsed of -{}ns is not valid!", e.duration().as_nanos())).as_nanos()
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_else(|e| {
+                panic!(
+                    "System clock error: Time elapsed of -{}ns is not valid!",
+                    e.duration().as_nanos()
+                )
+            })
+            .as_nanos()
     }
 }
 
@@ -236,7 +269,7 @@ impl<T: AddAssign + SubAssign + One + Copy> IncDec for T {
         ret
     }
 
-    fn dec(&mut self) -> Self  {
+    fn dec(&mut self) -> Self {
         *self -= T::one();
         *self
     }
@@ -249,14 +282,16 @@ impl<T: AddAssign + SubAssign + One + Copy> IncDec for T {
 }
 
 #[macro_export]
-macro_rules ! init_arr {
+macro_rules! init_arr {
     ($len:literal, $item:expr) => {
         [0; $len].map(|_| $item)
     };
 }
 
 pub trait SplitSized {
-    fn split_sized(&self, n: usize) -> Vec<Self> where Self: Sized;
+    fn split_sized(&self, n: usize) -> Vec<Self>
+    where
+        Self: Sized;
 }
 
 impl SplitSized for String {
@@ -669,14 +704,14 @@ pub type RwArc<T> = Arc<RwLock<T>>;
 pub enum PanicStyle {
     Normal,
     ForceExit,
-    Abort
+    Abort,
 }
 
 pub fn setup_private_panic(panic_style: Option<PanicStyle>) {
     std::panic::set_hook(Box::new(match panic_style {
         Some(PanicStyle::ForceExit) => panic_force,
         Some(PanicStyle::Abort) => panic_abort,
-        _ => panic
+        _ => panic,
     }));
 }
 
@@ -695,21 +730,20 @@ fn panic_abort(info: &PanicInfo) {
 }
 
 fn panic(info: &PanicInfo) {
-    let thread = std::thread::current().name().unwrap_or("unknown").to_string();
+    let thread = std::thread::current()
+        .name()
+        .unwrap_or("unknown")
+        .to_string();
     if let Some(message) = info.payload().downcast_ref::<&'static str>() {
         println!("Thread '{}' panicked with message '{}'", thread, message);
-    }
-    else if let Some(message) = info.payload().downcast_ref::<String>() {
+    } else if let Some(message) = info.payload().downcast_ref::<String>() {
         println!("Thread '{}' panicked with message '{}'", thread, message);
-    }
-    else if let Some(message) = info.payload().downcast_ref::<std::fmt::Arguments>() {
+    } else if let Some(message) = info.payload().downcast_ref::<std::fmt::Arguments>() {
         println!("Thread '{}' panicked with message '{}'", thread, message);
-    }
-    else {
+    } else {
         println!("Thread '{}' panicked", thread);
     }
 }
-
 
 pub fn key(mut n: u32) -> String {
     let mut result = String::new();

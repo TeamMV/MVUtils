@@ -1,9 +1,9 @@
-use crate::save::{Savable, Saver, Loader};
-use std::fmt::{Debug, Display, Formatter};
-use std::str::FromStr;
-use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
+use crate as mvutils;
 use mvutils_proc_macro::Savable;
+use std::cmp::Ordering;
+use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 #[derive(Eq, PartialEq, Copy, Clone, Savable)]
 pub struct Version {
@@ -25,7 +25,7 @@ impl Version {
         Version {
             major: (version >> 22) as u16,
             minor: ((version >> 12) & 0x3FF) as u16,
-            patch: (version & 0xFFF) as u16
+            patch: (version & 0xFFF) as u16,
         }
     }
 
@@ -34,10 +34,18 @@ impl Version {
             return None;
         }
         let digits = if version.starts_with("#version") {
-            version.replace("#version", "").replace(' ', "").chars().map(|c| c as u16 - 48).collect::<Vec<_>>()
-        }
-        else {
-            let results = version.replace(['v', ' '], "").split('.').map(u16::from_str).collect::<Vec<_>>();
+            version
+                .replace("#version", "")
+                .replace(' ', "")
+                .chars()
+                .map(|c| c as u16 - 48)
+                .collect::<Vec<_>>()
+        } else {
+            let results = version
+                .replace(['v', ' '], "")
+                .split('.')
+                .map(u16::from_str)
+                .collect::<Vec<_>>();
             if results.iter().any(Result::is_err) {
                 return None;
             }
@@ -50,22 +58,19 @@ impl Version {
                 minor: 0,
                 patch: 0,
             })
-        }
-        else if digits.len() == 2 {
+        } else if digits.len() == 2 {
             Some(Version {
                 major: digits[0],
                 minor: digits[1],
                 patch: 0,
             })
-        }
-        else if digits.len() == 3 {
+        } else if digits.len() == 3 {
             Some(Version {
                 major: digits[0],
                 minor: digits[1],
                 patch: digits[2],
             })
-        }
-        else {
+        } else {
             None
         }
     }
@@ -121,15 +126,22 @@ impl Display for Version {
 
 impl Debug for Version {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(format!("Version {{ major: {}, minor: {}, patch: {} }}", self.major, self.minor, self.patch).as_str())
+        f.write_str(
+            format!(
+                "Version {{ major: {}, minor: {}, patch: {} }}",
+                self.major, self.minor, self.patch
+            )
+            .as_str(),
+        )
     }
 }
 
 impl Ord for Version {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.major.cmp(&other.major)
-           .then(self.minor.cmp(&other.minor))
-           .then(self.patch.cmp(&other.patch))
+        self.major
+            .cmp(&other.major)
+            .then(self.minor.cmp(&other.minor))
+            .then(self.patch.cmp(&other.patch))
     }
 }
 

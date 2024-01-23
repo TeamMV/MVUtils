@@ -170,7 +170,9 @@ impl Loader for ByteBuffer {
         self.read_f32().ok()
     }
 
-    fn pop_f64(&mut self) -> Option<f64> { self.read_f64().ok() }
+    fn pop_f64(&mut self) -> Option<f64> {
+        self.read_f64().ok()
+    }
 
     fn pop_string(&mut self) -> Option<String> {
         self.read_string().ok()
@@ -199,17 +201,9 @@ macro_rules! impl_savable_primitive {
 }
 
 impl_savable_primitive!(
-    bool, push_bool, pop_bool,
-    u8, push_u8, pop_u8,
-    u16, push_u16, pop_u16,
-    u32, push_u32, pop_u32,
-    u64, push_u64, pop_u64,
-    i8, push_i8, pop_i8,
-    i16, push_i16, pop_i16,
-    i32, push_i32, pop_i32,
-    i64, push_i64, pop_i64,
-    f32, push_f32, pop_f32,
-    f64, push_f64, pop_f64
+    bool, push_bool, pop_bool, u8, push_u8, pop_u8, u16, push_u16, pop_u16, u32, push_u32, pop_u32,
+    u64, push_u64, pop_u64, i8, push_i8, pop_i8, i16, push_i16, pop_i16, i32, push_i32, pop_i32,
+    i64, push_i64, pop_i64, f32, push_f32, pop_f32, f64, push_f64, pop_f64
 );
 
 impl Savable for String {
@@ -218,7 +212,9 @@ impl Savable for String {
     }
 
     fn load(loader: &mut impl Loader) -> Result<Self, String> {
-        loader.pop_string().ok_or("Failed to load String from Loader!".to_string())
+        loader
+            .pop_string()
+            .ok_or("Failed to load String from Loader!".to_string())
     }
 }
 
@@ -237,7 +233,7 @@ impl<T: Savable> Savable for Option<T> {
         match u8::load(loader)? {
             0 => Ok(None),
             1 => Ok(Some(T::load(loader)?)),
-            _ => Err("Failed to load Option from Loader!".to_string())
+            _ => Err("Failed to load Option from Loader!".to_string()),
         }
     }
 }
@@ -248,7 +244,7 @@ impl<T: Savable, E: Savable> Savable for Result<T, E> {
             Ok(t) => {
                 saver.push_u8(0);
                 t.save(saver);
-            },
+            }
             Err(e) => {
                 saver.push_u8(1);
                 e.save(saver);
@@ -260,7 +256,7 @@ impl<T: Savable, E: Savable> Savable for Result<T, E> {
         match u8::load(loader)? {
             0 => Ok(Ok(T::load(loader)?)),
             1 => Ok(Err(E::load(loader)?)),
-            _ => Err("Failed to load Result from Loader!".to_string())
+            _ => Err("Failed to load Result from Loader!".to_string()),
         }
     }
 }

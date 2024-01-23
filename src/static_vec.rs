@@ -17,7 +17,7 @@ impl<T> StaticVec<T> {
     pub fn new(len: usize) -> Self {
         StaticVec {
             vec: vec![0; len].into_iter().map(|_| None).collect(),
-            len
+            len,
         }
     }
 
@@ -71,24 +71,18 @@ impl<T> IntoIterator for StaticVec<T> {
 }
 
 impl<T> FromIterator<T> for StaticVec<T> {
-    fn from_iter<I: IntoIterator<Item=T>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let vec = iter.into_iter().map(|v| Some(v)).collect::<Vec<_>>();
         let len = vec.len();
-        StaticVec {
-            vec,
-            len,
-        }
+        StaticVec { vec, len }
     }
 }
 
 impl<T> FromIterator<Option<T>> for StaticVec<T> {
-    fn from_iter<I: IntoIterator<Item=Option<T>>>(iter: I) -> Self {
+    fn from_iter<I: IntoIterator<Item = Option<T>>>(iter: I) -> Self {
         let vec = iter.into_iter().collect::<Vec<_>>();
         let len = vec.len();
-        StaticVec {
-            vec,
-            len,
-        }
+        StaticVec { vec, len }
     }
 }
 
@@ -96,10 +90,7 @@ impl<T> From<Vec<T>> for StaticVec<T> {
     fn from(vec: Vec<T>) -> Self {
         let vec = vec.into_iter().map(|v| Some(v)).collect::<Vec<_>>();
         let len = vec.len();
-        StaticVec {
-            vec,
-            len,
-        }
+        StaticVec { vec, len }
     }
 }
 
@@ -107,10 +98,7 @@ impl<T> From<Vec<Option<T>>> for StaticVec<T> {
     fn from(vec: Vec<Option<T>>) -> Self {
         let vec = vec.into_iter().collect::<Vec<_>>();
         let len = vec.len();
-        StaticVec {
-            vec,
-            len,
-        }
+        StaticVec { vec, len }
     }
 }
 
@@ -146,7 +134,6 @@ impl<T> Deref for StaticVec<T> {
 }
 
 impl<T> DerefMut for StaticVec<T> {
-
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.vec

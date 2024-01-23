@@ -4,8 +4,8 @@ use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 pub struct UnsafeRef<T> {
     ptr: *mut c_void,
@@ -13,10 +13,16 @@ pub struct UnsafeRef<T> {
 }
 
 impl<T> UnsafeRef<T> {
-    pub fn new(data: &T) -> Self {
+    /// Initialize an [`UnsafeRef<T>`] with a pointer value.
+    ///
+    /// # Safety
+    ///
+    /// It is up to the user to ensure that the pointed to value lives long enough, and that this
+    /// struct is dropped when the pointed value to is.
+    pub unsafe fn new(data: &T) -> Self {
         Self {
             ptr: data as *const T as *mut c_void,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 
@@ -29,7 +35,7 @@ impl<T> UnsafeRef<T> {
     pub unsafe fn null() -> Self {
         Self {
             ptr: std::ptr::null_mut(),
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 
@@ -47,7 +53,7 @@ impl<T> UnsafeRef<T> {
     pub unsafe fn cast_bytes<R>(&self) -> UnsafeRef<R> {
         UnsafeRef {
             ptr: self.ptr,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 
@@ -62,7 +68,9 @@ impl<T> UnsafeRef<T> {
     /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
     /// the rest of the program.
     pub unsafe fn as_static(&self) -> &'static T {
-        (self.ptr as *const T).as_ref().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
+        (self.ptr as *const T)
+            .as_ref()
+            .expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
     }
 
     /// Reinterpret the bytes at this pointer as static mutable reference. This does not change the bytes at the
@@ -72,13 +80,15 @@ impl<T> UnsafeRef<T> {
     /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
     /// the rest of the program.
     pub unsafe fn as_static_mut(&mut self) -> &'static T {
-        (self.ptr as *mut T).as_mut().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
+        (self.ptr as *mut T)
+            .as_mut()
+            .expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
     }
 }
 
-impl<T> From<&T> for UnsafeRef<T> {
-    fn from(value: &T) -> Self {
-        UnsafeRef::new(value)
+unsafe impl<T> UnsafeFrom<&T> for UnsafeRef<T> {
+    unsafe fn from(value: &T) -> Self {
+        Self::new(value)
     }
 }
 
@@ -87,7 +97,9 @@ impl<T> Deref for UnsafeRef<T> {
 
     fn deref(&self) -> &Self::Target {
         unsafe {
-            (self.ptr as *const T).as_ref().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
+            (self.ptr as *const T)
+                .as_ref()
+                .expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
         }
     }
 }
@@ -95,7 +107,9 @@ impl<T> Deref for UnsafeRef<T> {
 impl<T> DerefMut for UnsafeRef<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe {
-            (self.ptr as *mut T).as_mut().expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
+            (self.ptr as *mut T)
+                .as_mut()
+                .expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
         }
     }
 }
@@ -104,7 +118,7 @@ impl<T> Clone for UnsafeRef<T> {
     fn clone(&self) -> Self {
         Self {
             ptr: self.ptr,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 }
@@ -132,7 +146,7 @@ impl<T: Eq> Eq for UnsafeRef<T> {}
 #[derive(Debug)]
 pub struct HeapNullable<T> {
     ptr: *mut T,
-    drop: bool
+    drop: bool,
 }
 
 impl<T> HeapNullable<T> {
@@ -140,26 +154,25 @@ impl<T> HeapNullable<T> {
         unsafe {
             let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
             ptr.write(value);
-            HeapNullable {
-                ptr,
-                drop: true
-            }
+            HeapNullable { ptr, drop: true }
         }
     }
 
     pub fn null() -> HeapNullable<T> {
         HeapNullable {
             ptr: std::ptr::null_mut(),
-            drop: false
+            drop: false,
         }
     }
 
-    pub fn zeroed() -> HeapNullable<T> {
-        unsafe {
-            HeapNullable {
-                ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T,
-                drop: true
-            }
+    /// Creates a new [`HeapNullable<T>`] with a valid pointer to a zeroed value of T.
+    ///
+    /// # Safety
+    /// It is up to the user to ensure that a zeroed value of T is valid, or is made valid before usage.
+    pub unsafe fn zeroed() -> HeapNullable<T> {
+        HeapNullable {
+            ptr: std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T,
+            drop: true,
         }
     }
 
@@ -190,15 +203,17 @@ impl<T> HeapNullable<T> {
         }
     }
 
-    pub fn replace_zeroed(&mut self) {
-        unsafe {
-            if self.ptr.is_null() {
-                let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
-                self.ptr = ptr;
-                self.drop = true;
-            } else {
-                self.ptr.write_bytes(0, Layout::new::<T>().size());
-            }
+    /// Replaces the value with a valid pointer to a zeroed value of T.
+    ///
+    /// # Safety
+    /// It is up to the user to ensure that a zeroed value of T is valid, or is made valid before usage.
+    pub unsafe fn replace_zeroed(&mut self) {
+        if self.ptr.is_null() {
+            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+            self.ptr = ptr;
+            self.drop = true;
+        } else {
+            self.ptr.write_bytes(0, Layout::new::<T>().size());
         }
     }
 
@@ -222,29 +237,28 @@ impl<T> HeapNullable<T> {
                 self.ptr = std::ptr::null_mut();
                 self.drop = false;
                 val
-            }
-            else {
+            } else {
                 panic!("Null pointer dereference!")
             }
         }
     }
 
-    pub fn take_replace_zeroed(&mut self) -> T {
-        unsafe {
-            if self.ptr.is_null() {
-                panic!("Null pointer dereference!")
-            } else {
-                let val = self.ptr.read();
-                self.ptr.write_bytes(0, Layout::new::<T>().size());
-                val
-            }
+    /// Replaces the value with a valid pointer to a zeroed value of T, returning the previous value.
+    ///
+    /// # Safety
+    /// It is up to the user to ensure that a zeroed value of T is valid, or is made valid before usage.
+    pub unsafe fn take_replace_zeroed(&mut self) -> T {
+        if self.ptr.is_null() {
+            panic!("Null pointer dereference!")
+        } else {
+            let val = self.ptr.read();
+            self.ptr.write_bytes(0, Layout::new::<T>().size());
+            val
         }
     }
 
     pub fn extract(self) -> T {
-        unsafe {
-            std::ptr::read(self.ptr)
-        }
+        unsafe { std::ptr::read(self.ptr) }
     }
 
     /// Leaks the [`HeapNullable<T>`], returning the pointer to the heap allocated value.
@@ -270,7 +284,7 @@ impl<T> HeapNullable<T> {
         }
         HeapNullable {
             ptr: self.ptr as *mut R,
-            drop: true
+            drop: true,
         }
     }
 }
@@ -278,13 +292,17 @@ impl<T> HeapNullable<T> {
 impl<T> Deref for HeapNullable<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { self.ptr.as_ref().expect("Null pointer dereference! Check using HeapNullable::is_null() before dereferencing!") }
+        unsafe {
+            self.ptr.as_ref().expect("Null pointer dereference! Check using HeapNullable::is_null() before dereferencing!")
+        }
     }
 }
 
 impl<T> DerefMut for HeapNullable<T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { self.ptr.as_mut().expect("Null pointer dereference! Check using HeapNullable::is_null() before dereferencing!") }
+        unsafe {
+            self.ptr.as_mut().expect("Null pointer dereference! Check using HeapNullable::is_null() before dereferencing!")
+        }
     }
 }
 
@@ -302,8 +320,7 @@ impl<T: Display> Display for HeapNullable<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.is_null() {
             f.write_str("null")
-        }
-        else {
+        } else {
             self.deref().fmt(f)
         }
     }
@@ -313,11 +330,9 @@ impl<T: PartialEq> PartialEq for HeapNullable<T> {
     fn eq(&self, other: &Self) -> bool {
         if self.is_null() {
             other.is_null()
-        }
-        else if other.is_null() {
+        } else if other.is_null() {
             false
-        }
-        else {
+        } else {
             self.deref() == other.deref()
         }
     }
@@ -338,26 +353,22 @@ pub struct Nullable<T> {
 
 impl<T> Nullable<T> {
     pub fn new(value: T) -> Nullable<T> {
-        Nullable {
-            val: Some(value)
-        }
+        Nullable { val: Some(value) }
     }
 
     pub fn null() -> Nullable<T> {
-        Nullable {
-            val: None
-        }
+        Nullable { val: None }
     }
 
-    pub fn zeroed() -> Nullable<T> {
-        unsafe {
-            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
-            let val = ptr.read();
-            std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
-            Nullable {
-                val: Some(val)
-            }
-        }
+    /// Creates a new [`Nullable<T>`] with a valid pointer to a zeroed value of T.
+    ///
+    /// # Safety
+    /// It is up to the user to ensure that a zeroed value of T is valid, or is made valid before usage.
+    pub unsafe fn zeroed() -> Nullable<T> {
+        let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+        let val = ptr.read();
+        std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
+        Nullable { val: Some(val) }
     }
 
     pub fn is_null(&self) -> bool {
@@ -372,13 +383,15 @@ impl<T> Nullable<T> {
         self.val.take();
     }
 
-    pub fn replace_zeroed(&mut self) {
-        unsafe {
-            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
-            let val = ptr.read();
-            std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
-            self.val.replace(val);
-        }
+    /// Replaces the value with a valid pointer to a zeroed value of T, returning the previous value.
+    ///
+    /// # Safety
+    /// It is up to the user to ensure that a zeroed value of T is valid, or is made valid before usage.
+    pub unsafe fn replace_zeroed(&mut self) {
+        let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+        let val = ptr.read();
+        std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
+        self.val.replace(val);
     }
 
     pub fn take_replace(&mut self, value: T) -> T {
@@ -389,13 +402,15 @@ impl<T> Nullable<T> {
         self.val.take().expect("Null pointer dereference!")
     }
 
-    pub fn take_replace_zeroed(&mut self) -> T {
-        unsafe {
-            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
-            let val = ptr.read();
-            std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
-            self.val.replace(val).expect("Null pointer dereference!")
-        }
+    /// Replaces the value with a valid pointer to a zeroed value of T, returning the previous value.
+    ///
+    /// # Safety
+    /// It is up to the user to ensure that a zeroed value of T is valid, or is made valid before usage.
+    pub unsafe fn take_replace_zeroed(&mut self) -> T {
+        let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
+        let val = ptr.read();
+        std::alloc::dealloc(ptr as *mut u8, Layout::new::<T>());
+        self.val.replace(val).expect("Null pointer dereference!")
     }
 
     pub fn extract(self) -> T {
@@ -406,13 +421,17 @@ impl<T> Nullable<T> {
 impl<T> Deref for Nullable<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        self.val.as_ref().expect("Null pointer dereference! Check using StackNullable::is_null() before dereferencing!")
+        self.val.as_ref().expect(
+            "Null pointer dereference! Check using StackNullable::is_null() before dereferencing!",
+        )
     }
 }
 
 impl<T> DerefMut for Nullable<T> {
     fn deref_mut(&mut self) -> &mut T {
-        self.val.as_mut().expect("Null pointer dereference! Check using StackNullable::is_null() before dereferencing!")
+        self.val.as_mut().expect(
+            "Null pointer dereference! Check using StackNullable::is_null() before dereferencing!",
+        )
     }
 }
 
@@ -420,8 +439,7 @@ impl<T: Display> Display for Nullable<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.is_null() {
             f.write_str("null")
-        }
-        else {
+        } else {
             self.deref().fmt(f)
         }
     }
@@ -435,16 +453,13 @@ impl<T> From<T> for Nullable<T> {
 
 impl<T> From<Option<T>> for Nullable<T> {
     fn from(value: Option<T>) -> Self {
-        Nullable {
-            val: value,
-        }
+        Nullable { val: value }
     }
 }
 
 pub struct Unsafe;
 
 impl Unsafe {
-
     /// Reinterpret the bytes at this pointer as another type. This does not change the bytes at the
     /// reference.
     ///
@@ -587,8 +602,7 @@ impl<T> Drop for UnsafeRc<T> {
                     std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
                 }
                 std::alloc::dealloc(self.ref_count as *mut u8, Layout::new::<usize>());
-            }
-            else {
+            } else {
                 *self.ref_count -= 1;
             }
         }
@@ -671,8 +685,7 @@ impl<T> Drop for UnsafeArc<T> {
         unsafe {
             if self.ref_count.load(Ordering::Relaxed) == 1 && self.alloc {
                 std::alloc::dealloc(self.ptr as *mut u8, Layout::new::<T>());
-            }
-            else {
+            } else {
                 self.ref_count.fetch_sub(1, Ordering::Relaxed);
             }
         }
@@ -683,7 +696,11 @@ impl<T> Deref for UnsafeArc<T> {
     type Target = T;
 
     fn deref(&self) -> &T {
-        unsafe { self.ptr.as_ref().expect("Dereferencing a nulled UnsafeArc!") }
+        unsafe {
+            self.ptr
+                .as_ref()
+                .expect("Dereferencing a nulled UnsafeArc!")
+        }
     }
 }
 
@@ -713,14 +730,14 @@ unsafe impl<T: Sync> Sync for UnsafeArc<T> {}
 
 #[repr(transparent)]
 pub struct DangerousCell<T> {
-    inner: UnsafeCell<T>
+    inner: UnsafeCell<T>,
 }
 
 impl<T> DangerousCell<T> {
     #[inline(always)]
     pub fn new(value: T) -> Self {
         DangerousCell {
-            inner: UnsafeCell::new(value)
+            inner: UnsafeCell::new(value),
         }
     }
 
@@ -737,7 +754,9 @@ impl<T> DangerousCell<T> {
 
     #[inline(always)]
     pub fn replace(&self, value: T) {
-        unsafe { self.inner.get().write(value); }
+        unsafe {
+            self.inner.get().write(value);
+        }
     }
 }
 
@@ -754,6 +773,40 @@ impl<T> From<T> for DangerousCell<T> {
     }
 }
 
+/// A copy of the [`From<T>`] trait, but for types where this operation is unsafe.
+///
+/// # Safety
+/// It is up to the user to ensure that when using this, safety checks are implemented.
+unsafe trait UnsafeFrom<T>: Sized {
+    /// Converts to this type from the input type.
+    #[must_use]
+    unsafe fn from(value: T) -> Self;
+}
+
+/// A copy of the [`Into<T>`] trait, but for types where this operation is unsafe.
+///
+/// # Safety
+/// It is up to the user to ensure that when using this, safety checks are implemented.
+unsafe trait UnsafeInto<T>: Sized {
+    /// Converts this type into the (usually inferred) input type.
+    #[must_use]
+    unsafe fn into(self) -> T;
+}
+
+unsafe impl<T, U> UnsafeInto<U> for T
+where
+    U: UnsafeFrom<T>,
+{
+    /// Calls `U::from(self)`.
+    ///
+    /// That is, this conversion is whatever the implementation of
+    /// <code>[UnsafeFrom]&lt;T&gt; for U</code> chooses to do.
+    #[inline]
+    unsafe fn into(self) -> U {
+        U::from(self)
+    }
+}
+
 #[macro_export]
 macro_rules! unsafe_cast {
     ($val:ident, $to:ty) => {
@@ -764,7 +817,12 @@ macro_rules! unsafe_cast {
 #[macro_export]
 macro_rules! unsafe_cast_mut {
     ($val:ident, $to:ty) => {
-        unsafe { (($val as *const _) as *const $to).cast_mut().as_mut().unwrap() }
+        unsafe {
+            (($val as *const _) as *const $to)
+                .cast_mut()
+                .as_mut()
+                .unwrap()
+        }
     };
 }
 

@@ -1,7 +1,8 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{Attribute, Meta, Field, FieldsNamed, FieldsUnnamed, Generics, Ident, DataEnum, Fields};
+use std::str::FromStr;
 use syn::__private::Span;
+use syn::{Attribute, DataEnum, Field, Fields, FieldsNamed, FieldsUnnamed, Generics, Ident, Meta};
 
 fn filter(f: &&Field) -> bool {
     !f.attrs.iter().any(is_unsaved)
@@ -20,7 +21,7 @@ pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStre
     let save_fields = fields.iter().map(|f| {
         let name = &f.ident;
         quote! {
-            Savable::save(&self.#name, saver);
+            mvutils::save::Savable::save(&self.#name, saver);
         }
     });
 
@@ -28,7 +29,7 @@ pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStre
         let name = &f.ident;
         let ty = &f.ty;
         quote! {
-            let #name = <#ty as Savable>::load(loader)?;
+            let #name = <#ty as mvutils::save::Savable>::load(loader)?;
         }
     });
 
@@ -57,12 +58,12 @@ pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStre
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let implementation = quote! {
-        impl #impl_generics Savable for #name #ty_generics #where_clause {
-            fn save(&self, saver: &mut impl Saver) {
+        impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
+            fn save(&self, saver: &mut impl mvutils::save::Saver) {
                 #( #save_fields )*
             }
 
-            fn load(loader: &mut impl Loader) -> Result<Self, String> {
+            fn load(loader: &mut impl mvutils::save::Loader) -> Result<Self, String> {
                 #( #load_fields )*
                 #( #load_default_fields )*
 
@@ -84,27 +85,28 @@ pub fn unnamed(fields: &FieldsUnnamed, name: Ident, generics: Generics) -> Token
     }
 
     let save_fields = fields.iter().enumerate().map(|(i, _)| {
+        let i = proc_macro2::TokenStream::from_str(&i.to_string()).unwrap();
         quote! {
-            Savable::save(&self.#i, saver);
+            mvutils::save::Savable::save(&self.#i, saver);
         }
     });
 
     let load_fields = fields.iter().map(|f| {
         let ty = &f.ty;
         quote! {
-            <#ty as Savable>::load(loader)?
+            <#ty as mvutils::save::Savable>::load(loader)?
         }
     });
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let implementation = quote! {
-        impl #impl_generics Savable for #name #ty_generics #where_clause {
-            fn save(&self, saver: &mut impl Saver) {
+        impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
+            fn save(&self, saver: &mut impl mvutils::save::Saver) {
                 #( #save_fields )*
             }
 
-            fn load(loader: &mut impl Loader) -> Result<Self, String> {
+            fn load(loader: &mut impl mvutils::save::Loader) -> Result<Self, String> {
                 Ok(Self(#( #load_fields ),*))
             }
         }
@@ -117,10 +119,10 @@ pub fn unit(name: Ident, generics: Generics) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let implementation = quote! {
-        impl #impl_generics Savable for #name #ty_generics #where_clause {
-            fn save(&self, saver: &mut impl Saver) {}
+        impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
+            fn save(&self, saver: &mut impl mvutils::save::Saver) {}
 
-            fn load(loader: &mut impl Loader) -> Result<Self, String> {
+            fn load(loader: &mut impl mvutils::save::Loader) -> Result<Self, String> {
                 Ok(Self)
             }
         }
@@ -140,7 +142,7 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
     };
 
     let save = e.variants.iter().enumerate().map(|(i, v)| {
-        let ident =  &v.ident;
+        let ident = &v.ident;
         match &v.fields {
             Fields::Named(fields) => {
                 let names = fields.named.iter().map(|f| {
@@ -155,19 +157,20 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                 let saves = fields.iter().map(|f| {
                     let name = &f.ident;
                     quote! {
-                        Savable::save(#name, saver);
+                        mvutils::save::Savable::save(#name, saver);
                     }
                 });
 
                 quote! {
                     #name::#ident { #( #names ),* } => {
-                        Savable::save(&(#i as #id_ty), saver);
+                        mvutils::save::Savable::save(&(#i as #id_ty), saver);
                         #( #saves )*
                     }
                 }
             }
-            Fields::Unnamed(fields ) => {
-                let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.unnamed.iter().partition(filter);
+            Fields::Unnamed(fields) => {
+                let (fields, unsaved_fields): (Vec<_>, Vec<_>) =
+                    fields.unnamed.iter().partition(filter);
 
                 if !unsaved_fields.is_empty() {
                     panic!("Unnamed fields cannot be marked as unsaved!");
@@ -183,31 +186,32 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                 let saves = fields.iter().enumerate().map(|(i, _)| {
                     let name = key(i as u32);
                     quote! {
-                        Savable::save(#name, saver);
+                        mvutils::save::Savable::save(#name, saver);
                     }
                 });
 
                 quote! {
                     #name::#ident( #( #names ),* ) => {
-                        Savable::save(&(#i as #id_ty), saver);
+                        mvutils::save::Savable::save(&(#i as #id_ty), saver);
                         #( #saves )*
                     },
                 }
             }
             Fields::Unit => {
                 quote! {
-                    #name::#ident => Savable::save(&(#i as #id_ty), saver),
+                    #name::#ident => mvutils::save::Savable::save(&(#i as #id_ty), saver),
                 }
             }
         }
     });
 
     let load = e.variants.iter().enumerate().map(|(i, v)| {
-        let ident =  &v.ident;
+        let ident = &v.ident;
         let i = i as u32;
         match &v.fields {
             Fields::Named(fields) => {
-                let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.named.iter().partition(filter);
+                let (fields, unsaved_fields): (Vec<_>, Vec<_>) =
+                    fields.named.iter().partition(filter);
 
                 let names = fields.iter().map(|f| {
                     let name = &f.ident;
@@ -220,7 +224,7 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                     let name = &f.ident;
                     let ty = &f.ty;
                     quote! {
-                        let #name = <#ty as Savable>::load(loader)?;
+                        let #name = <#ty as mvutils::save::Savable>::load(loader)?;
                     }
                 });
 
@@ -251,8 +255,9 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                     }
                 }
             }
-            Fields::Unnamed(fields ) => {
-                let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.unnamed.iter().partition(filter);
+            Fields::Unnamed(fields) => {
+                let (fields, unsaved_fields): (Vec<_>, Vec<_>) =
+                    fields.unnamed.iter().partition(filter);
 
                 if !unsaved_fields.is_empty() {
                     panic!("Unnamed fields cannot be marked as unsaved!");
@@ -269,7 +274,7 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                     let name = key(i as u32);
                     let ty = &f.ty;
                     quote! {
-                        let #name = <#ty as Savable>::load(loader)?;
+                        let #name = <#ty as mvutils::save::Savable>::load(loader)?;
                     }
                 });
 
@@ -291,14 +296,14 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let implementation = quote! {
-        impl #impl_generics Savable for #name #ty_generics #where_clause {
-            fn save(&self, saver: &mut impl Saver) {
+        impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
+            fn save(&self, saver: &mut impl mvutils::save::Saver) {
                 match self {
                     #( #save )*
                 }
             }
 
-            fn load(loader: &mut impl Loader) -> Result<Self, String> {
+            fn load(loader: &mut impl mvutils::save::Loader) -> Result<Self, String> {
                 match #id_ty::load(loader)? as u32 {
                     #( #load )*
                     _ => Err(format!("Failed to load {} from loader!", stringify!(#name)))

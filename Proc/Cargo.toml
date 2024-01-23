@@ -1,9 +1,9 @@
 [package]
 name = "mvutils-proc-macro"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 license-file = "LICENSE"
-rust-version = "1.69.0"
+rust-version = "1.75.0"
 authors = [
     "Maxim Savenkov",
     "Julian Hohenhausen"
@@ -14,9 +14,7 @@ keywords = [
     "mvteam",
     "mvutils"
 ]
-categories = [
-    "utils"
-]
+categories = []
 description = "Procedural macros for MVUtils"
 
 [lib]
@@ -24,5 +22,5 @@ proc-macro = true
 
 [dependencies]
 quote = "1.0.29"
-syn = "2.0.22"
+syn = { version = "2.0.22", features = ["full"] }
 proc-macro2 = "1.0"
