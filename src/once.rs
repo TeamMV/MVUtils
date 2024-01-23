@@ -471,7 +471,7 @@ macro_rules! lazy_init {
         )*
     } => {
         $(
-            $v static $n $($k)?: LazyInitOnce<$t> = LazyInitOnce::new(|| { $init });
+            $v static $n $($k)?: $crate::once::LazyInitOnce<$t> = $crate::once::LazyInitOnce::new(|| { $init });
         )*
     };
     {
@@ -480,7 +480,7 @@ macro_rules! lazy_init {
         )*
     } => {
         $(
-            let $n $($k)?$(: LazyInitOnce<$t>)? = LazyInitOnce::new(|| { $init });
+            let $n $($k)?$(: $crate::once::LazyInitOnce<$t>)? = $crate::once::LazyInitOnce::new(|| { $init });
         )*
     };
 }
@@ -493,7 +493,7 @@ macro_rules! lazy {
         )*
     } => {
         $(
-            $v static $n $($k)?: Lazy<$t> = Lazy::new(|| { $init });
+            $v static $n $($k)?: $crate::once::Lazy<$t> = $crate::once::Lazy::new(|| { $init });
         )*
     };
     {
@@ -502,7 +502,7 @@ macro_rules! lazy {
         )*
     } => {
         $(
-            let $n $($k)?$(: Lazy<$t>)? = Lazy::new(|| { $init });
+            let $n $($k)?$(: $crate::once::Lazy<$t>)? = $crate::once::Lazy::new(|| { $init });
         )*
     };
 }
@@ -515,7 +515,7 @@ macro_rules! create_once {
         )*
     } => {
         $(
-            $v static $n $($k)?: CreateOnce<$t> = CreateOnce::new();
+            $v static $n $($k)?: $crate::once::CreateOnce<$t> = $crate::once::CreateOnce::new();
         )*
     };
     {
@@ -524,7 +524,7 @@ macro_rules! create_once {
         )*
     } => {
         $(
-            let $n $($k)?: CreateOnce<$t> = CreateOnce::new();
+            let $n $($k)?: $crate::once::CreateOnce<$t> = $crate::once::CreateOnce::new();
         )*
     };
 }
