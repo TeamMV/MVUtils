@@ -1,5 +1,4 @@
 use crate::lazy;
-use crate::once::Lazy;
 use num_traits::One;
 use std::collections::HashMap;
 use std::ops::Range;

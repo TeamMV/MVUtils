@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use bytebuffer::ByteBuffer;
 
 pub trait Saver {
@@ -287,5 +288,15 @@ impl Savable for ByteBuffer {
 
     fn load(loader: &mut impl Loader) -> Result<Self, String> {
         Vec::<u8>::load(loader).map(Into::into)
+    }
+}
+
+impl<T: Savable> Savable for Box<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        self.deref().save(saver)
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        Ok(Box::new(T::load(loader)?))
     }
 }
