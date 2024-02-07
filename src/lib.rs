@@ -14,6 +14,7 @@ pub use mvutils_proc_macro::Savable;
 mod tests {
     use crate as mvutils;
     use bytebuffer::ByteBuffer;
+    use mvutils_proc_macro::try_from_string;
     use mvutils_proc_macro::Savable;
 
     #[derive(Savable)]
@@ -40,6 +41,14 @@ mod tests {
             _b: u32,
             c: i32,
         },
+    }
+
+    #[try_from_string]
+    enum Enum {
+        A,
+        B,
+        C,
+        HelloWorld,
     }
 
     #[test]

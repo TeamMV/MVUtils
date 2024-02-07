@@ -1,5 +1,5 @@
-use std::ops::Deref;
 use bytebuffer::ByteBuffer;
+use std::ops::Deref;
 
 pub trait Saver {
     fn push_bytes(&mut self, bytes: &[u8]);
