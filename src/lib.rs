@@ -8,7 +8,7 @@ pub mod version;
 #[cfg(feature = "xml")]
 pub mod xml;
 
-pub use mvutils_proc_macro::Savable;
+pub use mvutils_proc_macro::{Savable, try_from_string};
 
 #[cfg(test)]
 mod tests {
