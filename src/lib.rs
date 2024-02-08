@@ -2,13 +2,14 @@ pub mod once;
 pub mod print;
 pub mod save;
 pub mod static_vec;
+pub mod thread;
 pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
 #[cfg(feature = "xml")]
 pub mod xml;
 
-pub use mvutils_proc_macro::{Savable, try_from_string};
+pub use mvutils_proc_macro::{try_from_string, Savable};
 
 #[cfg(test)]
 mod tests {

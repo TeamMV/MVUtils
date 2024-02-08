@@ -1,0 +1,50 @@
+use crate::once::Lazy;
+use crate::utils::Recover;
+use hashbrown::HashMap;
+use std::sync::Mutex;
+use std::thread::ThreadId;
+
+pub struct ThreadUnique<T> {
+    inner: Lazy<Mutex<HashMap<ThreadId, T>>>,
+    gen: fn() -> T,
+}
+
+impl<T> ThreadUnique<T> {
+    pub const fn new(gen: fn() -> T) -> Self {
+        ThreadUnique {
+            inner: Lazy::new(|| HashMap::new().into()),
+            gen,
+        }
+    }
+
+    #[allow(clippy::mut_from_ref)]
+    pub fn get(&self) -> &mut T {
+        let mut inner = self.inner.lock().recover();
+        let ptr = inner
+            .entry(std::thread::current().id())
+            .or_insert((self.gen)()) as *mut T;
+        unsafe { ptr.as_mut().unwrap() }
+    }
+}
+
+#[macro_export]
+macro_rules! thread_unique {
+    {
+        $(
+            $v:vis static $n:ident $($k:ident)?: $t:ty = $init:expr;
+        )*
+    } => {
+        $(
+            $v static $n $($k)?: $crate::thread::ThreadUnique<$t> = $crate::thread::ThreadUnique::new(|| { $init });
+        )*
+    };
+    {
+        $(
+            let $n:ident $($k:ident)?$(: $t:ty)? = $init:expr;
+        )*
+    } => {
+        $(
+            let $n $($k)?: $crate::thread::ThreadUnique<$t> = $crate::thread::ThreadUnique::new(|| { $init });
+        )*
+    };
+}

@@ -1,6 +1,6 @@
 [package]
 name = "mvutils"
-version = "0.4.4"
+version = "0.5.0"
 edition = "2021"
 license-file = "LICENSE"
 rust-version = "1.75.0"
@@ -24,10 +24,10 @@ codegen-units = 1
 debug = false
 
 [features]
-xml = ["dep:hashbrown"]
+xml = []
 
 [dependencies]
 bytebuffer = "2.1.1"
 num-traits = "0.2.15"
 mvutils-proc-macro = { path = "./Proc", version = "0.4.0" }
-hashbrown = { version = "0.14.3", optional = true }
+hashbrown = "0.14.3"
