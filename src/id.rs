@@ -7,7 +7,7 @@ pub trait Id {
 }
 
 pub trait StaticallyLoaded {
-    fn get_map() -> &mut HashMap<u64, Arc<Self>>;
+    fn get_map() -> &'static mut HashMap<u64, Arc<Self>>;
 }
 
 impl<T: Id + StaticallyLoaded> Savable for Arc<T> {
