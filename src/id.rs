@@ -10,7 +10,7 @@ pub trait StaticallyLoaded {
     fn get_map() -> &'static mut HashMap<u64, Arc<Self>>;
 }
 
-impl<T: Id + StaticallyLoaded> Savable for Arc<T> {
+impl<T: Id + StaticallyLoaded + 'static> Savable for Arc<T> {
     fn save(&self, saver: &mut impl Saver) {
         saver.push_u64(self.get_id())
     }
