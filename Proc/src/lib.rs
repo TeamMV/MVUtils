@@ -3,7 +3,6 @@ extern crate proc_macro;
 use crate::savable::{enumerator, named, unit, unnamed};
 use proc_macro::TokenStream;
 use std::str::FromStr;
-use std::thread::Scope;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields};
 

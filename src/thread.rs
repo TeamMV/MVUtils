@@ -1,3 +1,4 @@
+use std::ops::{Deref, DerefMut};
 use crate::once::Lazy;
 use crate::utils::Recover;
 use hashbrown::HashMap;
@@ -24,6 +25,20 @@ impl<T> ThreadUnique<T> {
             .entry(std::thread::current().id())
             .or_insert((self.gen)()) as *mut T;
         unsafe { ptr.as_mut().unwrap() }
+    }
+}
+
+impl<T> Deref for ThreadUnique<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.get()
+    }
+}
+
+impl<T> DerefMut for ThreadUnique<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.get()
     }
 }
 

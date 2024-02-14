@@ -1,6 +1,6 @@
 [package]
 name = "mvutils"
-version = "0.5.3"
+version = "0.5.4"
 edition = "2021"
 license-file = "LICENSE"
 rust-version = "1.75.0"
@@ -25,6 +25,7 @@ debug = false
 
 [features]
 xml = []
+savable_arc = []
 
 [dependencies]
 bytebuffer = "2.1.1"

@@ -8,7 +8,8 @@ pub mod utils;
 pub mod version;
 #[cfg(feature = "xml")]
 pub mod xml;
-pub mod id;
+#[cfg(feature = "savable_arc")]
+pub mod savable_arc;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
