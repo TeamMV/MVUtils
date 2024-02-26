@@ -6,6 +6,7 @@ pub mod thread;
 pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
+pub mod hashers;
 #[cfg(feature = "xml")]
 pub mod xml;
 #[cfg(feature = "savable_arc")]
