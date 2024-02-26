@@ -1,7 +1,7 @@
 use std::hash::{BuildHasher, Hasher};
 
 #[derive(Default)]
-struct U64IdentityHasher {
+pub struct U64IdentityHasher {
     value: u64,
 }
 
@@ -28,7 +28,7 @@ impl BuildHasher for U64IdentityHasher {
 }
 
 #[derive(Default)]
-struct U32IdentityHasher {
+pub struct U32IdentityHasher {
     value: u32,
 }
 
@@ -55,7 +55,7 @@ impl BuildHasher for U32IdentityHasher {
 }
 
 #[derive(Default)]
-struct I64IdentityHasher {
+pub struct I64IdentityHasher {
     value: i64,
 }
 
@@ -82,7 +82,7 @@ impl BuildHasher for I64IdentityHasher {
 }
 
 #[derive(Default)]
-struct I32IdentityHasher {
+pub struct I32IdentityHasher {
     value: i32,
 }
 
