@@ -287,6 +287,30 @@ macro_rules! init_arr {
     };
 }
 
+#[macro_export]
+macro_rules! enum_val {
+    (
+        $en:ident, $inp:tt, $var:tt
+    ) => {
+        match $inp {
+            $en::$var(i) => i,
+            _ => panic!("Illegal Variant"),
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! enum_val_ref {
+    (
+        $en:ident, $inp:ident, $var:tt
+    ) => {
+        match $inp {
+            $en::$var(ref i) => i,
+            _ => panic!("Illegal Variant"),
+        }
+    };
+}
+
 pub trait SplitSized {
     fn split_sized(&self, n: usize) -> Vec<Self>
     where
