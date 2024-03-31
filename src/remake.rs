@@ -7,7 +7,7 @@ pub struct Remake<T> {
 impl<T> Remake<T> {
     pub fn new(item: T) -> Self {
         Remake {
-            item
+            item: Some(item)
         }
     }
 
@@ -31,14 +31,8 @@ impl<T> Remake<T> {
 impl<T> From<T> for Remake<T> {
     fn from(value: T) -> Self {
         Remake {
-            item: value
+            item: Some(value)
         }
-    }
-}
-
-impl<T> From<Remake<T>> for T {
-    fn from(value: Remake<T>) -> Self {
-        value.take()
     }
 }
 
