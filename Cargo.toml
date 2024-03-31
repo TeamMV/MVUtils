@@ -1,6 +1,6 @@
 [package]
 name = "mvutils"
-version = "0.5.7"
+version = "0.6.0"
 edition = "2021"
 license-file = "LICENSE"
 rust-version = "1.75.0"
@@ -15,6 +15,7 @@ keywords = [
     "mvutils"
 ]
 description = "A utility crate made from commonly used functions in my projects."
+
 
 [profile.release]
 opt-level = 3

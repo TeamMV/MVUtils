@@ -11,6 +11,7 @@ pub mod hashers;
 pub mod xml;
 #[cfg(feature = "savable_arc")]
 pub mod savable_arc;
+mod remakable;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 

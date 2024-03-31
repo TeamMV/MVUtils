@@ -7,14 +7,16 @@ use std::str::FromStr;
 
 #[derive(Eq, PartialEq, Copy, Clone, Savable)]
 pub struct Version {
+    variant: u16,
     major: u16,
     minor: u16,
     patch: u16,
 }
 
 impl Version {
-    pub fn new(major: u16, minor: u16, patch: u16) -> Self {
+    pub fn new(variant: u16, major: u16, minor: u16, patch: u16) -> Self {
         Version {
+            variant,
             major,
             minor,
             patch,
@@ -23,7 +25,8 @@ impl Version {
 
     pub fn parse_vulkan(version: u32) -> Self {
         Version {
-            major: (version >> 22) as u16,
+            variant: (version >> 29) as u16,
+            major: ((version >> 22) & 0x7f) as u16,
             minor: ((version >> 12) & 0x3FF) as u16,
             patch: (version & 0xFFF) as u16,
         }
@@ -54,18 +57,21 @@ impl Version {
 
         if digits.len() == 1 {
             Some(Version {
+                variant: 0,
                 major: digits[0],
                 minor: 0,
                 patch: 0,
             })
         } else if digits.len() == 2 {
             Some(Version {
+                variant: 0,
                 major: digits[0],
                 minor: digits[1],
                 patch: 0,
             })
         } else if digits.len() == 3 {
             Some(Version {
+                variant: 0,
                 major: digits[0],
                 minor: digits[1],
                 patch: digits[2],
@@ -80,7 +86,11 @@ impl Version {
     }
 
     pub fn as_vulkan_version(&self) -> u32 {
-        ((self.major as u32) << 22) | ((self.minor as u32) << 12) | (self.patch as u32)
+        ((self.variant as u32) << 29 | (self.major as u32) << 22) | ((self.minor as u32) << 12) | (self.patch as u32)
+    }
+
+    pub fn variant(&self) -> u16 {
+        self.variant
     }
 
     pub fn major(&self) -> u16 {
@@ -93,6 +103,10 @@ impl Version {
 
     pub fn patch(&self) -> u16 {
         self.patch
+    }
+
+    pub fn set_variant(&mut self, variant: u16) {
+        self.variant = variant;
     }
 
     pub fn set_major(&mut self, major: u16) {
@@ -111,6 +125,7 @@ impl Version {
 impl Default for Version {
     fn default() -> Self {
         Version {
+            variant: 0,
             major: 1,
             minor: 0,
             patch: 0,
