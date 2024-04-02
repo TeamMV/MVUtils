@@ -781,3 +781,17 @@ pub fn key(mut n: u32) -> String {
     }
     result.chars().rev().collect()
 }
+
+pub trait PClamp {
+    fn p_clamp<T: PartialOrd>(self, min: Self, max: Self) -> Self where Self: PartialOrd + Sized {
+        if self < min {
+            return min;
+        }
+        if self > max {
+            return max;
+        }
+        self
+    }
+}
+
+impl<T: PartialOrd> PClamp for T {}
