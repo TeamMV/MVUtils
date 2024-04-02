@@ -1,7 +1,7 @@
-use std::ops::{Deref, DerefMut};
 use crate::once::Lazy;
 use crate::utils::Recover;
 use hashbrown::HashMap;
+use std::ops::{Deref, DerefMut};
 use std::sync::Mutex;
 use std::thread::ThreadId;
 

@@ -1,17 +1,17 @@
+pub mod hashers;
 pub mod once;
 pub mod print;
+pub mod remake;
+#[cfg(feature = "savable_arc")]
+pub mod savable_arc;
 pub mod save;
 pub mod static_vec;
 pub mod thread;
 pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
-pub mod hashers;
-pub mod remake;
 #[cfg(feature = "xml")]
 pub mod xml;
-#[cfg(feature = "savable_arc")]
-pub mod savable_arc;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 

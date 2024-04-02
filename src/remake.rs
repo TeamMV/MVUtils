@@ -6,17 +6,19 @@ pub struct Remake<T> {
 
 impl<T> Remake<T> {
     pub fn new(item: T) -> Self {
-        Remake {
-            item: Some(item)
-        }
+        Remake { item: Some(item) }
     }
 
     pub fn get(&self) -> &T {
-        self.item.as_ref().expect("Remake item should never be None")
+        self.item
+            .as_ref()
+            .expect("Remake item should never be None")
     }
 
     pub fn get_mut(&mut self) -> &mut T {
-        self.item.as_mut().expect("Remake item should never be None")
+        self.item
+            .as_mut()
+            .expect("Remake item should never be None")
     }
 
     pub fn take(self) -> T {
@@ -24,15 +26,15 @@ impl<T> Remake<T> {
     }
 
     pub fn replace<F: Fn(T) -> T>(&mut self, function: F) {
-        self.item = Some(function(self.item.take().expect("Remake item should never be None")));
+        self.item = Some(function(
+            self.item.take().expect("Remake item should never be None"),
+        ));
     }
 }
 
 impl<T> From<T> for Remake<T> {
     fn from(value: T) -> Self {
-        Remake {
-            item: Some(value)
-        }
+        Remake { item: Some(value) }
     }
 }
 

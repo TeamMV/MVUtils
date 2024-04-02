@@ -86,7 +86,9 @@ impl Version {
     }
 
     pub fn as_vulkan_version(&self) -> u32 {
-        ((self.variant as u32) << 29 | (self.major as u32) << 22) | ((self.minor as u32) << 12) | (self.patch as u32)
+        ((self.variant as u32) << 29 | (self.major as u32) << 22)
+            | ((self.minor as u32) << 12)
+            | (self.patch as u32)
     }
 
     pub fn variant(&self) -> u16 {
