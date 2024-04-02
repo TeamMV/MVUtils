@@ -783,7 +783,7 @@ pub fn key(mut n: u32) -> String {
 }
 
 pub trait PClamp {
-    fn p_clamp<T: PartialOrd>(self, min: Self, max: Self) -> Self where Self: PartialOrd + Sized {
+    fn p_clamp(self, min: Self, max: Self) -> Self where Self: PartialOrd + Sized {
         if self < min {
             return min;
         }

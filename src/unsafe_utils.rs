@@ -777,7 +777,7 @@ impl<T> From<T> for DangerousCell<T> {
 ///
 /// # Safety
 /// It is up to the user to ensure that when using this, safety checks are implemented.
-unsafe trait UnsafeFrom<T>: Sized {
+pub unsafe trait UnsafeFrom<T>: Sized {
     /// Converts to this type from the input type.
     #[must_use]
     unsafe fn from(value: T) -> Self;
@@ -787,7 +787,7 @@ unsafe trait UnsafeFrom<T>: Sized {
 ///
 /// # Safety
 /// It is up to the user to ensure that when using this, safety checks are implemented.
-unsafe trait UnsafeInto<T>: Sized {
+pub unsafe trait UnsafeInto<T>: Sized {
     /// Converts this type into the (usually inferred) input type.
     #[must_use]
     unsafe fn into(self) -> T;
