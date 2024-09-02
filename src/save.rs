@@ -1,5 +1,6 @@
 use bytebuffer::ByteBuffer;
 use std::ops::Deref;
+use std::time::{Duration, Instant, SystemTime};
 
 pub trait Saver {
     fn push_bytes(&mut self, bytes: &[u8]);
@@ -298,5 +299,42 @@ impl<T: Savable> Savable for Box<T> {
 
     fn load(loader: &mut impl Loader) -> Result<Self, String> {
         Ok(Box::new(T::load(loader)?))
+    }
+}
+
+impl Savable for Duration {
+    fn save(&self, saver: &mut impl Saver) {
+        saver.push_u64(self.as_secs());
+        saver.push_u32(self.subsec_nanos());
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let secs = u64::load(loader)?;
+        let nanos = u32::load(loader)?;
+
+        Ok(Duration::new(secs, nanos))
+    }
+}
+
+impl Savable for Instant {
+    fn save(&self, saver: &mut impl Saver) {
+        let duration = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default() - Instant::now().duration_since(*self);
+        duration.save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let duration = Duration::load(loader)?;
+        Ok(Instant::now() + duration - SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default())
+    }
+}
+
+impl Savable for SystemTime {
+    fn save(&self, saver: &mut impl Saver) {
+        self.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let duration = Duration::load(loader)?;
+        Ok(SystemTime::UNIX_EPOCH + duration)
     }
 }
