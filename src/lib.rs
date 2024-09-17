@@ -10,9 +10,7 @@ pub mod thread;
 pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
-#[cfg(feature = "xml")]
-pub mod xml;
-mod state;
+pub mod state;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
