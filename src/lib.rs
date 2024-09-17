@@ -12,6 +12,7 @@ pub mod utils;
 pub mod version;
 #[cfg(feature = "xml")]
 pub mod xml;
+mod state;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
@@ -23,6 +24,8 @@ mod tests {
     use bytebuffer::ByteBuffer;
     use mvutils_proc_macro::try_from_string;
     use mvutils_proc_macro::Savable;
+    use crate::state::State;
+    use crate::when;
 
     #[derive(Savable)]
     struct A;
@@ -94,5 +97,29 @@ mod tests {
         sleep(Duration::from_millis(100));
 
         println!("{}", b.duration_since(c).unwrap().as_millis());
+    }
+
+    #[test]
+    fn test_state() {
+        let state = State::new("Hello".to_string());
+        state.force_outdated();
+
+        let handle = {
+            let state = state.clone();
+            std::thread::spawn(move || {
+                for i in 0..10 {
+                    when!([state] => {
+                        println!("{}", state.read());
+                    });
+                    state.update();
+                    sleep(Duration::from_millis(100));
+                }
+            })
+        };
+
+        sleep(Duration::from_millis(200));
+        state.write().push_str(", world!");
+
+        handle.join().unwrap();
     }
 }
