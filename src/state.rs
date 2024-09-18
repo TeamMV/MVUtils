@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc};
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::unsafe_utils::DangerousCell;
-use crate::utils::Recover;
 
 pub struct State<T> {
     inner: Arc<(DangerousCell<u64>, RwLock<T>)>,
@@ -17,12 +17,12 @@ impl<T> State<T> {
     }
 
     pub fn read(&self) -> RwLockReadGuard<T> {
-        self.inner.1.read().recover()
+        self.inner.1.read()
     }
 
     pub fn write(&self) -> StateWriteGuard<T> {
         StateWriteGuard {
-            inner: self.inner.1.write().recover(),
+            inner: self.inner.1.write(),
             ptr: self.inner.0.get_mut(),
         }
     }
@@ -113,5 +113,9 @@ impl<'a, T: ?Sized + 'a> Drop for StateWriteGuard<'a, T> {
 macro_rules! when {
     ([$($dependency:ident),+] => $code:block) => {
         if $($dependency.is_outdated())||+ $code
+    };
+    ([$($dependency:ident),+] => $code:block else $otherwise:block) => {
+        if $($dependency.is_outdated())||+ $code
+        else $otherwise
     };
 }

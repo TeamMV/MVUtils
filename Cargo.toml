@@ -1,6 +1,6 @@
 [package]
 name = "mvutils"
-version = "0.7.1"
+version = "0.7.2"
 edition = "2021"
 license-file = "LICENSE"
 rust-version = "1.75.0"
@@ -20,7 +20,7 @@ description = "A utility crate made from commonly used functions in my projects.
 [profile.release]
 opt-level = 3
 strip = true
-lto = true
+lto = "fat"
 codegen-units = 1
 debug = false
 
@@ -32,3 +32,4 @@ bytebuffer = "2.1.1"
 num-traits = "0.2.15"
 mvutils-proc-macro = { path = "./Proc", version = "0.4.0" }
 hashbrown = "0.14.3"
+parking_lot = "0.12.3"
