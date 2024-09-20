@@ -121,3 +121,13 @@ macro_rules! when {
     ([] => $code:block) => {};
     ([] => $code:block else $otherwise:block) => { $otherwise };
 }
+
+#[macro_export]
+macro_rules! update {
+    ([$($dependency:expr),+$(,)?]) => {
+        $(
+            $dependency.update();
+        )+
+    }
+    ([]) => {}
+}

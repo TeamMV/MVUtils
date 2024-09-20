@@ -23,7 +23,7 @@ mod tests {
     use mvutils_proc_macro::try_from_string;
     use mvutils_proc_macro::Savable;
     use crate::state::State;
-    use crate::when;
+    use crate::{update, when};
 
     #[derive(Savable)]
     struct A;
@@ -109,7 +109,7 @@ mod tests {
                     when!([state] => {
                         println!("{}", state.read());
                     });
-                    state.update();
+                    update!([state]);
                     sleep(Duration::from_millis(100));
                 }
             })
