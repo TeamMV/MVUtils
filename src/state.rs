@@ -128,6 +128,6 @@ macro_rules! update {
         $(
             $dependency.update();
         )+
-    }
-    ([]) => {}
+    };
+    ([]) => {};
 }
