@@ -1,10 +1,11 @@
 use crate::lazy;
 use num_traits::One;
+use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::ops::Range;
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
-use std::panic::PanicInfo;
-use std::sync::{Arc, LockResult, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::panic::PanicHookInfo;
+use std::sync::{Arc, LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::*;
 
 pub trait Plural {
@@ -448,7 +449,7 @@ lazy! {
 }
 
 pub fn next_id(key: &str) -> u64 {
-    let mut guard = IDS.lock().unwrap();
+    let mut guard = IDS.lock();
     let entry = guard.entry(key.to_string()).or_insert(0);
     *entry += 1;
 
@@ -722,7 +723,7 @@ impl<T> RwUnchecked<T> for RwLock<T> {
     }
 }
 
-pub type RwArc<T> = Arc<RwLock<T>>;
+pub type RwArc<T> = Arc<parking_lot::RwLock<T>>;
 
 pub enum PanicStyle {
     Normal,
@@ -742,17 +743,17 @@ pub fn setup_private_panic_default() {
     setup_private_panic(None)
 }
 
-fn panic_force(info: &PanicInfo) {
+fn panic_force(info: &PanicHookInfo) {
     panic(info);
     std::process::exit(1)
 }
 
-fn panic_abort(info: &PanicInfo) {
+fn panic_abort(info: &PanicHookInfo) {
     panic(info);
     std::process::abort()
 }
 
-fn panic(info: &PanicInfo) {
+fn panic(info: &PanicHookInfo) {
     let thread = std::thread::current()
         .name()
         .unwrap_or("unknown")
