@@ -111,13 +111,13 @@ impl<'a, T: ?Sized + 'a> Drop for StateWriteGuard<'a, T> {
 
 #[macro_export]
 macro_rules! when {
-    ([] => $code:block) => {};
-    ([] => $code:block else $otherwise:block) => { $otherwise };
-    ([$($dependency:expr),+] => $code:block) => {
+    ([$($dependency:expr),+$(,)?] => $code:block) => {
         if $($dependency.is_outdated())||+ $code
     };
-    ([$($dependency:expr),+] => $code:block else $otherwise:block) => {
+    ([$($dependency:expr),+$(,)?] => $code:block else $otherwise:block) => {
         if $($dependency.is_outdated())||+ $code
         else $otherwise
     };
+    ([] => $code:block) => {};
+    ([] => $code:block else $otherwise:block) => { $otherwise };
 }
