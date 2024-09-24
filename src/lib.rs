@@ -11,6 +11,7 @@ pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
 pub mod state;
+pub mod ordefault;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
@@ -24,6 +25,7 @@ mod tests {
     use mvutils_proc_macro::Savable;
     use crate::state::State;
     use crate::{update, when};
+    use crate::ordefault::OrDefault;
 
     #[derive(Savable)]
     struct A;
@@ -119,5 +121,12 @@ mod tests {
         state.write().push_str(", world!");
 
         handle.join().unwrap();
+    }
+
+    #[test]
+    fn test_ordefault() {
+        let mut od = OrDefault::uninit(5);
+        od.set(2);
+        println!("od: {od}");
     }
 }
