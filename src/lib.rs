@@ -12,6 +12,7 @@ pub mod utils;
 pub mod version;
 pub mod state;
 pub mod ordefault;
+pub mod clock;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
@@ -25,6 +26,7 @@ mod tests {
     use mvutils_proc_macro::Savable;
     use crate::state::State;
     use crate::{update, when};
+    use crate::clock::Clock;
     use crate::ordefault::OrDefault;
 
     #[derive(Savable)]
@@ -128,5 +130,16 @@ mod tests {
         let mut od = OrDefault::uninit(5);
         od.set(2);
         println!("od: {od}");
+    }
+
+    #[test]
+    fn test_clock() {
+        let mut clock = Clock::new_and_start(2);
+
+        let mut i = 10;
+        for _ in 0..i {
+            clock.wait_tick(10);
+            println!("Hello");
+        }
     }
 }
