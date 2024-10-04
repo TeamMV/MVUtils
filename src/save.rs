@@ -356,7 +356,7 @@ mod short_string {
 
     impl ShortString {
         pub fn new(s: impl Into<String>) -> Self {
-            Self(s.into())
+            ShortString(s.into())
         }
 
         pub fn extract(self) -> String {

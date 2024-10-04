@@ -11,7 +11,6 @@ pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
 pub mod state;
-pub mod clock;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
@@ -25,7 +24,6 @@ mod tests {
     use mvutils_proc_macro::Savable;
     use crate::state::State;
     use crate::{update, when};
-    use crate::clock::Clock;
     use crate::save::{Savable, ShortString, ToShortString};
 
     #[derive(Savable)]
@@ -122,17 +120,6 @@ mod tests {
         state.write().push_str(", world!");
 
         handle.join().unwrap();
-    }
-
-    #[test]
-    fn test_clock() {
-        let mut clock = Clock::new_and_start(2);
-
-        let i = 10;
-        for _ in 0..i {
-            clock.wait_tick(10);
-            println!("Hello");
-        }
     }
 
     #[test]
