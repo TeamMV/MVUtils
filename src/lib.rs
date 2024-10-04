@@ -11,7 +11,6 @@ pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
 pub mod state;
-pub mod ordefault;
 pub mod clock;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
@@ -27,7 +26,7 @@ mod tests {
     use crate::state::State;
     use crate::{update, when};
     use crate::clock::Clock;
-    use crate::ordefault::OrDefault;
+    use crate::save::{Savable, ShortString, ToShortString};
 
     #[derive(Savable)]
     struct A;
@@ -109,7 +108,7 @@ mod tests {
         let handle = {
             let state = state.clone();
             std::thread::spawn(move || {
-                for i in 0..10 {
+                for _ in 0..10 {
                     when!([state] => {
                         println!("{}", state.read());
                     });
@@ -126,20 +125,27 @@ mod tests {
     }
 
     #[test]
-    fn test_ordefault() {
-        let mut od = OrDefault::uninit(5);
-        od.set(2);
-        println!("od: {od}");
-    }
-
-    #[test]
     fn test_clock() {
         let mut clock = Clock::new_and_start(2);
 
-        let mut i = 10;
+        let i = 10;
         for _ in 0..i {
             clock.wait_tick(10);
             println!("Hello");
         }
+    }
+
+    #[test]
+    fn test_short_string() {
+        let short_string: ShortString = "Hello".to_short_string();
+
+        let mut buffer = ByteBuffer::new();
+        short_string.save(&mut buffer);
+
+        assert_eq!(buffer.len(), 6);
+
+        let str = ShortString::load(&mut buffer).unwrap();
+
+        assert_eq!(short_string, str);
     }
 }

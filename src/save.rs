@@ -338,3 +338,99 @@ impl Savable for SystemTime {
         Ok(SystemTime::UNIX_EPOCH + duration)
     }
 }
+
+mod short_string {
+    use std::fmt::Display;
+    use std::ops::{Deref, DerefMut};
+    use crate::save::{Loader, Savable, Saver};
+
+    /// # Short String
+    ///
+    /// This struct is identical to [`String`], and dereferences to [`String`] and [`str`]
+    ///
+    /// The only difference, is when saved with a [`Saver`], the length of a short string will be
+    /// saved as a `u8`, not a `u32`
+    #[repr(transparent)]
+    #[derive(Clone, Debug, Eq, PartialEq, Hash)]
+    pub struct ShortString(String);
+
+    impl ShortString {
+        pub fn new(s: impl Into<String>) -> Self {
+            Self(s.into())
+        }
+
+        pub fn extract(self) -> String {
+            self.0
+        }
+    }
+
+    impl Savable for ShortString {
+        fn save(&self, saver: &mut impl Saver) {
+            saver.push_u8(self.0.len() as u8);
+            saver.push_bytes(self.0.as_bytes());
+        }
+
+        fn load(loader: &mut impl Loader) -> Result<Self, String> {
+            let len = u8::load(loader)?;
+            let bytes = loader.pop_bytes(len as usize).ok_or("Failed to load ShortString from Loader!")?;
+            Ok(Self(String::from_utf8(bytes).map_err(|e| e.to_string())?))
+        }
+    }
+
+    impl<T: Into<String>> From<T> for ShortString {
+        fn from(value: T) -> Self {
+            Self::new(value.into())
+        }
+    }
+
+    pub trait ToShortString {
+        fn to_short_string(&self) -> ShortString;
+    }
+
+    impl<T: ToString> ToShortString for T {
+        fn to_short_string(&self) -> ShortString {
+            self.to_string().into()
+        }
+    }
+
+    impl Deref for ShortString {
+        type Target = String;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for ShortString {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+
+    impl AsRef<String> for ShortString {
+        fn as_ref(&self) -> &String {
+            &self.0
+        }
+    }
+
+    impl AsMut<String> for ShortString {
+        fn as_mut(&mut self) -> &mut String {
+            &mut self.0
+        }
+    }
+
+    impl AsRef<str> for ShortString {
+        fn as_ref(&self) -> &str {
+            &self.0
+        }
+    }
+
+    impl Display for ShortString {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.0.fmt(f)
+        }
+    }
+}
+
+pub use short_string::*;
+
