@@ -126,6 +126,8 @@ mod tests {
     fn test_short_string() {
         let short_string: ShortString = "Hello".to_short_string();
 
+        assert!(short_string.validate());
+
         let mut buffer = ByteBuffer::new();
         short_string.save(&mut buffer);
 
@@ -134,5 +136,28 @@ mod tests {
         let str = ShortString::load(&mut buffer).unwrap();
 
         assert_eq!(short_string, str);
+
+        let mut long_string: ShortString = "".to_short_string();
+        for i in 0..260 {
+            long_string.push('c');
+        }
+
+        assert!(!long_string.validate());
+
+        let mut buffer = ByteBuffer::new();
+        long_string.save(&mut buffer);
+
+        assert_eq!(buffer.len(), 256);
+
+        let str = ShortString::load(&mut buffer).unwrap();
+
+        assert_ne!(short_string, str);
+
+        let mut test_str = "".to_short_string();
+        for i in 0..255 {
+            test_str.push('c');
+        }
+
+        assert_eq!(str, test_str);
     }
 }

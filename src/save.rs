@@ -362,12 +362,21 @@ mod short_string {
         pub fn extract(self) -> String {
             self.0
         }
+
+        pub fn validate(&self) -> bool {
+            self.0.as_bytes().len() <= 255
+        }
     }
 
     impl Savable for ShortString {
         fn save(&self, saver: &mut impl Saver) {
-            saver.push_u8(self.0.len() as u8);
-            saver.push_bytes(self.0.as_bytes());
+            let bytes = self.0.as_bytes();
+            saver.push_u8(bytes.len().min(255) as u8);
+            if bytes.len() > 255 {
+                saver.push_bytes(&bytes[..255]);
+            } else {
+                saver.push_bytes(bytes);
+            }
         }
 
         fn load(loader: &mut impl Loader) -> Result<Self, String> {
