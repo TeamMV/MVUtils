@@ -1,8 +1,59 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote};
 use std::str::FromStr;
 use syn::__private::Span;
-use syn::{Attribute, DataEnum, Field, Fields, FieldsNamed, FieldsUnnamed, Generics, Ident, Meta};
+use syn::{parse, Attribute, DataEnum, Expr, Field, Fields, FieldsNamed, FieldsUnnamed, Generics, Ident, Meta, Token};
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+
+struct KeyValue {
+    key: Ident,
+    #[allow(dead_code)]
+    eq_token: Token![=],
+    value: Expr,
+}
+
+impl Parse for KeyValue {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(KeyValue {
+            key: input.parse()?,
+            eq_token: input.parse()?,
+            value: input.parse()?,
+        })
+    }
+}
+
+fn filter_custom(f: &&Field) -> bool {
+    f.attrs.iter().any(|attr| {
+        if let Meta::List(ref l) = attr.meta {
+            l.path.segments.iter().any(|s| s.ident == "custom")
+        } else {
+            false
+        }
+    })
+}
+
+fn get_custom(f: &Field) -> (Expr, Expr) {
+    f.attrs.iter().filter_map(|attr| {
+        if let Meta::List(ref l) = attr.meta {
+            if l.path.segments.iter().any(|s| s.ident == "custom") {
+                let tokens: TokenStream = l.tokens.clone().into();
+                let values = parse::Parser::parse(Punctuated::<KeyValue, Token![,]>::parse_terminated, tokens).unwrap();
+                if values.len() != 2 {
+                    panic!("Expected 'save' and 'load' values for custom attribute")
+                }
+                if values[0].key.to_string() != "save" || values[1].key.to_string() != "load" {
+                    panic!("Expected 'save' and 'load' values for custom attribute")
+                }
+                if !matches!(values[0].value, Expr::Path(_)) || !matches!(values[1].value, Expr::Path(_)) {
+                    panic!("Expected 'save' and 'load' to be path attributes to saving and loading function")
+                }
+                return Some((values[0].value.clone(), values[1].value.clone()));
+            }
+        }
+        None
+    }).next().unwrap()
+}
 
 fn filter(f: &&Field) -> bool {
     !f.attrs.iter().any(is_unsaved)
@@ -18,10 +69,22 @@ fn is_unsaved(attr: &Attribute) -> bool {
 
 pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStream {
     let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.named.iter().partition(filter);
+
+    let (custom_fields, fields): (Vec<_>, Vec<_>) = fields.into_iter().partition(filter_custom);
+
+    let custom_fields: Vec<_> = custom_fields.into_iter().map(|f| (f, get_custom(f))).collect();
+
     let save_fields = fields.iter().map(|f| {
         let name = &f.ident;
         quote! {
             mvutils::save::Savable::save(&self.#name, saver);
+        }
+    });
+
+    let save_custom_fields = custom_fields.iter().map(|(f, (save, _))| {
+        let name = &f.ident;
+        quote! {
+            #save(saver, &self.#name);
         }
     });
 
@@ -41,6 +104,13 @@ pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStre
         }
     });
 
+    let load_custom_fields = custom_fields.iter().map(|(f, (_, load))| {
+        let name = &f.ident;
+        quote! {
+            let #name = #load(loader)?;
+        }
+    });
+
     let init_struct = fields.iter().map(|f| {
         let name = &f.ident;
         quote! {
@@ -55,21 +125,34 @@ pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStre
         }
     });
 
+    let init_custom_struct = custom_fields.iter().map(|(f, _)| {
+        let name = &f.ident;
+        quote! {
+            #name
+        }
+    });
+
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let t1 = if fields.is_empty() { quote!{} } else { quote!{,} };
+    let t2 = if custom_fields.is_empty() { quote!{} } else { quote!{,} };
 
     let implementation = quote! {
         impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
             fn save(&self, saver: &mut impl mvutils::save::Saver) {
                 #( #save_fields )*
+                #( #save_custom_fields )*
             }
 
             fn load(loader: &mut impl mvutils::save::Loader) -> Result<Self, String> {
                 #( #load_fields )*
                 #( #load_default_fields )*
+                #( #load_custom_fields )*
 
                 Ok(Self {
-                    #( #init_struct ),*,
-                    #( #init_default_struct ),*
+                    #( #init_struct ),*#t1
+                    #( #init_default_struct ),*#t2
+                    #( #init_custom_struct ),*
                 })
             }
         }
@@ -79,24 +162,59 @@ pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStre
 }
 
 pub fn unnamed(fields: &FieldsUnnamed, name: Ident, generics: Generics) -> TokenStream {
-    let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.unnamed.iter().partition(filter);
-    if !unsaved_fields.is_empty() {
-        panic!("Unnamed fields cannot be marked as unsaved!");
-    }
+    let fields: Vec<_> = fields.unnamed.iter().enumerate().collect();
+    let amount = fields.len();
 
-    let save_fields = fields.iter().enumerate().map(|(i, _)| {
+    let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.iter().partition(|(_, f)| filter(f));
+
+    let (custom_fields, fields): (Vec<_>, Vec<_>) = fields.into_iter().partition(|(_, f)| filter_custom(f));
+
+    let custom_fields: Vec<_> = custom_fields.into_iter().map(|(i, f)| ((i, f), get_custom(f))).collect();
+
+    let save_fields = fields.iter().map(|(i, _)| {
         let i = proc_macro2::TokenStream::from_str(&i.to_string()).unwrap();
         quote! {
             mvutils::save::Savable::save(&self.#i, saver);
         }
     });
 
-    let load_fields = fields.iter().map(|f| {
-        let ty = &f.ty;
+    let save_custom_fields = custom_fields.iter().map(|((i, _), (save, _))| {
+        let i = proc_macro2::TokenStream::from_str(&i.to_string()).unwrap();
         quote! {
-            <#ty as mvutils::save::Savable>::load(loader)?
+            #save(saver, &self.#i);
         }
     });
+
+    let load_fields = fields.iter().map(|(i, f)| {
+        let ty = &f.ty;
+        let key = key(*i as u32);
+        quote! {
+            let #key = <#ty as mvutils::save::Savable>::load(loader)?;
+        }
+    });
+
+    let load_unsaved_fields = unsaved_fields.iter().map(|(i, f)| {
+        let ty = &f.ty;
+        let key = key(*i as u32);
+        quote! {
+            let #key = <#ty as Default>::default();
+        }
+    });
+
+    let load_custom_fields = custom_fields.iter().map(|((i, _), (_, load))| {
+        let key = key(*i as u32);
+        quote! {
+            let #key = #load(loader)?;
+        }
+    });
+
+    let mut names = Vec::with_capacity(amount);
+    for i in 0..amount {
+        let key = key(i as u32);
+        names.push(quote! {
+            #key
+        });
+    }
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -104,10 +222,14 @@ pub fn unnamed(fields: &FieldsUnnamed, name: Ident, generics: Generics) -> Token
         impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
             fn save(&self, saver: &mut impl mvutils::save::Saver) {
                 #( #save_fields )*
+                #( #save_custom_fields )*
             }
 
             fn load(loader: &mut impl mvutils::save::Loader) -> Result<Self, String> {
-                Ok(Self(#( #load_fields ),*))
+                #( #load_fields )*
+                #( #load_unsaved_fields )*
+                #( #load_custom_fields )*
+                Ok(Self(#( #names ),*))
             }
         }
     };
@@ -154,6 +276,10 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
 
                 let (fields, _): (Vec<_>, Vec<_>) = fields.named.iter().partition(filter);
 
+                let (custom_fields, fields): (Vec<_>, Vec<_>) = fields.into_iter().partition(filter_custom);
+
+                let custom_fields: Vec<_> = custom_fields.into_iter().map(|f| (f, get_custom(f))).collect();
+
                 let saves = fields.iter().map(|f| {
                     let name = &f.ident;
                     quote! {
@@ -161,39 +287,58 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                     }
                 });
 
+                let custom_saves = custom_fields.iter().map(|(f, (save, _))| {
+                    let name = &f.ident;
+                    quote! {
+                        #save(saver, #name);
+                    }
+                });
+
                 quote! {
                     #name::#ident { #( #names ),* } => {
                         mvutils::save::Savable::save(&(#i as #id_ty), saver);
                         #( #saves )*
+                        #( #custom_saves )*
                     }
                 }
             }
             Fields::Unnamed(fields) => {
-                let (fields, unsaved_fields): (Vec<_>, Vec<_>) =
-                    fields.unnamed.iter().partition(filter);
+                let fields: Vec<_> = fields.unnamed.iter().enumerate().collect();
+                let amount = fields.len();
 
-                if !unsaved_fields.is_empty() {
-                    panic!("Unnamed fields cannot be marked as unsaved!");
-                }
+                let (fields, _): (Vec<_>, Vec<_>) = fields.iter().partition(|(_, f)| filter(f));
 
-                let names = fields.iter().enumerate().map(|(i, _)| {
-                    let key = key(i as u32);
-                    quote! {
-                        #key
-                    }
-                });
+                let (custom_fields, fields): (Vec<_>, Vec<_>) = fields.into_iter().partition(|(_, f)| filter_custom(f));
 
-                let saves = fields.iter().enumerate().map(|(i, _)| {
-                    let name = key(i as u32);
+                let custom_fields: Vec<_> = custom_fields.into_iter().map(|(i, f)| ((i, f), get_custom(f))).collect();
+
+                let saves = fields.iter().map(|(i, _)| {
+                    let name = key(*i as u32);
                     quote! {
                         mvutils::save::Savable::save(#name, saver);
                     }
                 });
 
+                let custom_saves = custom_fields.iter().map(|((i, _), (save, _))| {
+                    let name = key(*i as u32);
+                    quote! {
+                        #save(saver, #name);
+                    }
+                });
+
+                let mut names = Vec::with_capacity(amount);
+                for i in 0..amount {
+                    let key = key(i as u32);
+                    names.push(quote! {
+                        #key
+                    });
+                }
+
                 quote! {
                     #name::#ident( #( #names ),* ) => {
                         mvutils::save::Savable::save(&(#i as #id_ty), saver);
                         #( #saves )*
+                        #( #custom_saves )*
                     },
                 }
             }
@@ -213,7 +358,18 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                 let (fields, unsaved_fields): (Vec<_>, Vec<_>) =
                     fields.named.iter().partition(filter);
 
+                let (custom_fields, fields): (Vec<_>, Vec<_>) = fields.into_iter().partition(filter_custom);
+
+                let custom_fields: Vec<_> = custom_fields.into_iter().map(|f| (f, get_custom(f))).collect();
+
                 let names = fields.iter().map(|f| {
+                    let name = &f.ident;
+                    quote! {
+                        #name
+                    }
+                });
+
+                let custom_names = custom_fields.iter().map(|(f, _)| {
                     let name = &f.ident;
                     quote! {
                         #name
@@ -236,6 +392,13 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                     }
                 });
 
+                let load_custom_fields = custom_fields.iter().map(|(f, (_, load))| {
+                    let name = &f.ident;
+                    quote! {
+                        let #name = #load(loader)?;
+                    }
+                });
+
                 let init_default_struct = unsaved_fields.iter().map(|f| {
                     let name = &f.ident;
                     quote! {
@@ -243,44 +406,69 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
                     }
                 });
 
+                let t1 = if fields.is_empty() { quote!{} } else { quote!{,} };
+                let t2 = if custom_fields.is_empty() { quote!{} } else { quote!{,} };
+
                 quote! {
                     #i => {
                         #( #load_fields )*
                         #( #load_default_fields )*
+                        #( #load_custom_fields )*
 
                         Ok(#name::#ident {
-                            #( #names ),*,
-                            #( #init_default_struct ),*
+                            #( #names ),*#t1
+                            #( #init_default_struct ),*#t2
+                            #( #custom_names ),*
                         })
                     }
                 }
             }
             Fields::Unnamed(fields) => {
-                let (fields, unsaved_fields): (Vec<_>, Vec<_>) =
-                    fields.unnamed.iter().partition(filter);
+                let fields: Vec<_> = fields.unnamed.iter().enumerate().collect();
+                let amount = fields.len();
 
-                if !unsaved_fields.is_empty() {
-                    panic!("Unnamed fields cannot be marked as unsaved!");
-                }
+                let (fields, unsaved_fields): (Vec<_>, Vec<_>) = fields.iter().partition(|(_, f)| filter(f));
 
-                let names = fields.iter().enumerate().map(|(i, _)| {
-                    let key = key(i as u32);
-                    quote! {
-                        #key
-                    }
-                });
+                let (custom_fields, fields): (Vec<_>, Vec<_>) = fields.into_iter().partition(|(_, f)| filter_custom(f));
 
-                let loads = fields.iter().enumerate().map(|(i, f)| {
-                    let name = key(i as u32);
+                let custom_fields: Vec<_> = custom_fields.into_iter().map(|(i, f)| ((i, f), get_custom(f))).collect();
+
+                let loads = fields.iter().map(|(i, f)| {
+                    let name = key(*i as u32);
                     let ty = &f.ty;
                     quote! {
                         let #name = <#ty as mvutils::save::Savable>::load(loader)?;
                     }
                 });
 
+                let unsaved_loads = unsaved_fields.iter().map(|(i, f)| {
+                    let ty = &f.ty;
+                    let key = key(*i as u32);
+                    quote! {
+                        let #key = <#ty as Default>::default();
+                    }
+                });
+
+                let custom_loads = custom_fields.iter().map(|((i, _), (_, load))| {
+                    let key = key(*i as u32);
+                    quote! {
+                        let #key = #load(loader)?;
+                    }
+                });
+
+                let mut names = Vec::with_capacity(amount);
+                for i in 0..amount {
+                    let key = key(i as u32);
+                    names.push(quote! {
+                        #key
+                    });
+                }
+
                 quote! {
                     #i => {
                         #( #loads )*
+                        #( #unsaved_loads )*
+                        #( #custom_loads )*
                         Ok(#name::#ident( #( #names ),* ))
                     }
                 }

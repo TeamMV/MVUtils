@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use crate::save::{Loader, Savable, Saver};
 
 pub struct Remake<T> {
     item: Option<T>,
@@ -49,5 +50,15 @@ impl<T> Deref for Remake<T> {
 impl<T> DerefMut for Remake<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.get_mut()
+    }
+}
+
+impl<T: Savable> Savable for Remake<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        self.get().save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        Ok(Remake::new(T::load(loader)?))
     }
 }
