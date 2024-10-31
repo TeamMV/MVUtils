@@ -87,7 +87,7 @@ impl<T> UnsafeRef<T> {
 }
 
 unsafe impl<T> UnsafeFrom<&T> for UnsafeRef<T> {
-    unsafe fn from(value: &T) -> Self {
+    unsafe fn unsafe_from(value: &T) -> Self {
         Self::new(value)
     }
 }
@@ -780,7 +780,7 @@ impl<T> From<T> for DangerousCell<T> {
 pub unsafe trait UnsafeFrom<T>: Sized {
     /// Converts to this type from the input type.
     #[must_use]
-    unsafe fn from(value: T) -> Self;
+    unsafe fn unsafe_from(value: T) -> Self;
 }
 
 /// A copy of the [`Into<T>`] trait, but for types where this operation is unsafe.
@@ -790,7 +790,7 @@ pub unsafe trait UnsafeFrom<T>: Sized {
 pub unsafe trait UnsafeInto<T>: Sized {
     /// Converts this type into the (usually inferred) input type.
     #[must_use]
-    unsafe fn into(self) -> T;
+    unsafe fn unsafe_into(self) -> T;
 }
 
 unsafe impl<T, U> UnsafeInto<U> for T
@@ -802,7 +802,7 @@ where
     /// That is, this conversion is whatever the implementation of
     /// <code>[UnsafeFrom]&lt;T&gt; for U</code> chooses to do.
     #[inline]
-    unsafe fn into(self) -> U {
+    unsafe fn unsafe_into(self) -> U {
         U::from(self)
     }
 }

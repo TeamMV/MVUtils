@@ -9,6 +9,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex, Once,
 };
+use crate::save::{Loader, Savable, Saver};
 
 #[derive(Debug, Default)]
 pub struct AlreadyInitialized;
@@ -148,6 +149,23 @@ impl<T: Display> Display for InitOnce<T> {
 impl<T> From<T> for InitOnce<T> {
     fn from(value: T) -> Self {
         Self::new(value)
+    }
+}
+
+impl<T: Savable> Savable for InitOnce<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        self.value.save(saver);
+        self.init_called.load(Ordering::Acquire).save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let value = T::load(loader)?;
+        let init_called = AtomicBool::new(bool::load(loader)?);
+        Ok(InitOnce {
+            value: UnsafeCell::new(value),
+            once: Once::new(),
+            init_called,
+        })
     }
 }
 
@@ -299,6 +317,21 @@ impl<T: Display> Display for CreateOnce<T> {
     }
 }
 
+impl<T: Savable> Savable for CreateOnce<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        self.value.save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let value = <Option<T>>::load(loader)?;
+        Ok(CreateOnce {
+            init_called: AtomicBool::new(value.is_some()),
+            value: UnsafeCell::new(value),
+            once: Once::new(),
+        })
+    }
+}
+
 unsafe impl<T: Send> Send for CreateOnce<T> {}
 unsafe impl<T: Sync> Sync for CreateOnce<T> {}
 impl<T> RefUnwindSafe for CreateOnce<T> {}
@@ -355,6 +388,24 @@ impl<T> DerefMut for Lazy<T> {
 impl<T: Display> Display for Lazy<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         (**self).fmt(f)
+    }
+}
+
+impl<T: Savable> Savable for Lazy<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        Deref::deref(self).save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let value = T::load(loader)?;
+        Ok(Lazy {
+            value: CreateOnce {
+                value: UnsafeCell::new(Some(value)),
+                once: Once::new(),
+                init_called: AtomicBool::new(true),
+            },
+            init: Mutex::new(None),
+        })
     }
 }
 
@@ -456,6 +507,28 @@ impl<T> Deref for LazyInitOnce<T> {
 impl<T: Display> Display for LazyInitOnce<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         (**self).fmt(f)
+    }
+}
+
+impl<T: Savable> Savable for LazyInitOnce<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        Deref::deref(self).save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let value = T::load(loader)?;
+        Ok(LazyInitOnce {
+            value: CreateOnce {
+                value: UnsafeCell::new(Some(InitOnce {
+                    value: UnsafeCell::new(value),
+                    once: Once::new(),
+                    init_called: AtomicBool::new(true),
+                })),
+                once: Once::new(),
+                init_called: AtomicBool::new(true),
+            },
+            init: Mutex::new(None),
+        })
     }
 }
 

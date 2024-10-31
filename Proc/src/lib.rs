@@ -8,7 +8,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 mod savable;
 
-#[proc_macro_derive(Savable, attributes(unsaved))]
+#[proc_macro_derive(Savable, attributes(unsaved, custom))]
 pub fn derive_savable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
