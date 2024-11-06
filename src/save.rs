@@ -622,7 +622,7 @@ pub mod custom {
         Ok(String::from_utf8(bytes).map_err(|e| e.to_string())?)
     }
 
-    pub fn vec8_save<T: Savable>(saver: &mut impl Saver, vec: Vec<T>) {
+    pub fn vec8_save<T: Savable>(saver: &mut impl Saver, vec: &Vec<T>) {
         saver.push_u8(vec.len().min(255) as u8);
         if vec.len() > 255 {
             for i in 0..255 {
@@ -644,7 +644,7 @@ pub mod custom {
         Ok(vec)
     }
 
-    pub fn vec16_save<T: Savable>(saver: &mut impl Saver, vec: Vec<T>) {
+    pub fn vec16_save<T: Savable>(saver: &mut impl Saver, vec: &Vec<T>) {
         saver.push_u16(vec.len().min(65535) as u16);
         if vec.len() > 65535 {
             for i in 0..65535 {
@@ -666,7 +666,7 @@ pub mod custom {
         Ok(vec)
     }
 
-    pub fn vec32_save<T: Savable>(saver: &mut impl Saver, vec: Vec<T>) {
+    pub fn vec32_save<T: Savable>(saver: &mut impl Saver, vec: &Vec<T>) {
         saver.push_u32(vec.len().min(4294967295) as u32);
         if vec.len() > 4294967295 {
             for i in 0..4294967295 {
