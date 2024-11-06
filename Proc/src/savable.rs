@@ -134,8 +134,8 @@ pub fn named(fields: &FieldsNamed, name: Ident, generics: Generics) -> TokenStre
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let t1 = if fields.is_empty() { quote!{} } else { quote!{,} };
-    let t2 = if custom_fields.is_empty() { quote!{} } else { quote!{,} };
+    let t1 = if !fields.is_empty() { quote!{,} } else { quote!{} };
+    let t2 = if !unsaved_fields.is_empty() { quote!{,} } else { quote!{} };
 
     let implementation = quote! {
         impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
