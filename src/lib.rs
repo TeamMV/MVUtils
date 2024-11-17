@@ -45,6 +45,21 @@ mod tests {
         c: i32,
     }
 
+    #[derive(Savable)]
+    struct D {
+        a: String,
+        #[unsaved]
+        _b: u32,
+        #[custom(save = hello, load = world)]
+        c: i32,
+        d: u32,
+        #[unsaved]
+        e: String,
+        f: u32,
+        #[custom(save = hello, load = world)]
+        g: i32,
+    }
+
     fn hello(saver: &mut impl Saver, val: &i32) {
         saver.push_i32(*val);
         saver.push_i32(*val);

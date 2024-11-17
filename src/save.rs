@@ -687,5 +687,23 @@ pub mod custom {
         }
         Ok(vec)
     }
+    
+    pub fn no_length_vec_save<T: Savable>(saver: &mut impl Saver, vec: &Vec<T>) {
+        for t in vec {
+            t.save(saver);
+        }
+    }
+    
+    pub fn empty_vec_load<T>(_: &mut impl Loader) -> Result<Vec<T>, String> {
+        Ok(Vec::new())
+    }
+    
+    pub fn save<T: Savable>(saver: &mut impl Saver, item: &T) {
+        item.save(saver);
+    }
+    
+    pub fn load<T: Savable>(loader: &mut impl Loader) -> Result<T, String> {
+        T::load(loader)
+    }
 }
 
