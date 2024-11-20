@@ -28,6 +28,10 @@ pub trait Loader {
     fn pop_bytes_unchecked(&mut self, amount: usize) -> Vec<u8> {
         self.pop_bytes(amount).unwrap()
     }
+    fn pop_to_end(&mut self) -> Option<Vec<u8>>;
+    fn pop_to_end_unchecked(&mut self) -> Vec<u8> {
+        self.pop_to_end().unwrap()
+    }
     fn pop_bool(&mut self) -> Option<bool>;
     fn pop_bool_unchecked(&mut self) -> bool {
         self.pop_bool().unwrap()
@@ -75,6 +79,55 @@ pub trait Loader {
     fn pop_string(&mut self) -> Option<String>;
     fn pop_string_unchecked(&mut self) -> String {
         self.pop_string().unwrap()
+    }
+    
+    fn peek_bytes(&mut self, amount: usize) -> Option<Vec<u8>>;
+    fn peek_bytes_unchecked(&mut self, amount: usize) -> Vec<u8> {
+        self.peek_bytes(amount).unwrap()
+    }
+    fn peek_bool(&mut self) -> Option<bool>;
+    fn peek_bool_unchecked(&mut self) -> bool {
+        self.peek_bool().unwrap()
+    }
+    fn peek_u8(&mut self) -> Option<u8>;
+    fn peek_u8_unchecked(&mut self) -> u8 {
+        self.peek_u8().unwrap()
+    }
+    fn peek_u16(&mut self) -> Option<u16>;
+    fn peek_u16_unchecked(&mut self) -> u16 {
+        self.peek_u16().unwrap()
+    }
+    fn peek_u32(&mut self) -> Option<u32>;
+    fn peek_u32_unchecked(&mut self) -> u32 {
+        self.peek_u32().unwrap()
+    }
+    fn peek_u64(&mut self) -> Option<u64>;
+    fn peek_u64_unchecked(&mut self) -> u64 {
+        self.peek_u64().unwrap()
+    }
+    fn peek_i8(&mut self) -> Option<i8>;
+    fn peek_i8_unchecked(&mut self) -> i8 {
+        self.peek_i8().unwrap()
+    }
+    fn peek_i16(&mut self) -> Option<i16>;
+    fn peek_i16_unchecked(&mut self) -> i16 {
+        self.peek_i16().unwrap()
+    }
+    fn peek_i32(&mut self) -> Option<i32>;
+    fn peek_i32_unchecked(&mut self) -> i32 {
+        self.peek_i32().unwrap()
+    }
+    fn peek_i64(&mut self) -> Option<i64>;
+    fn peek_i64_unchecked(&mut self) -> i64 {
+        self.peek_i64().unwrap()
+    }
+    fn peek_f32(&mut self) -> Option<f32>;
+    fn peek_f32_unchecked(&mut self) -> f32 {
+        self.peek_f32().unwrap()
+    }
+    fn peek_f64(&mut self) -> Option<f64>;
+    fn peek_f64_unchecked(&mut self) -> f64 {
+        self.peek_f64().unwrap()
     }
 }
 
@@ -137,6 +190,10 @@ impl Loader for ByteBuffer {
         self.read_bytes(amount).ok()
     }
 
+    fn pop_to_end(&mut self) -> Option<Vec<u8>> {
+        self.read_bytes(self.len() - self.get_rpos()).ok()
+    }
+
     fn pop_bool(&mut self) -> Option<bool> {
         self.read_bit().ok()
     }
@@ -183,6 +240,90 @@ impl Loader for ByteBuffer {
 
     fn pop_string(&mut self) -> Option<String> {
         self.read_string().ok()
+    }
+
+    fn peek_bytes(&mut self, amount: usize) -> Option<Vec<u8>> {
+        let rpos = self.get_rpos();
+        let bytes = self.read_bytes(amount).ok();
+        self.set_rpos(rpos);
+        bytes
+    }
+
+    fn peek_bool(&mut self) -> Option<bool> {
+        let rpos = self.get_rpos();
+        let result = self.pop_bool();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_u8(&mut self) -> Option<u8> {
+        let rpos = self.get_rpos();
+        let result = self.pop_u8();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_u16(&mut self) -> Option<u16> {
+        let rpos = self.get_rpos();
+        let result = self.pop_u16();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_u32(&mut self) -> Option<u32> {
+        let rpos = self.get_rpos();
+        let result = self.pop_u32();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_u64(&mut self) -> Option<u64> {
+        let rpos = self.get_rpos();
+        let result = self.pop_u64();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_i8(&mut self) -> Option<i8> {
+        let rpos = self.get_rpos();
+        let result = self.pop_i8();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_i16(&mut self) -> Option<i16> {
+        let rpos = self.get_rpos();
+        let result = self.pop_i16();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_i32(&mut self) -> Option<i32> {
+        let rpos = self.get_rpos();
+        let result = self.pop_i32();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_i64(&mut self) -> Option<i64> {
+        let rpos = self.get_rpos();
+        let result = self.pop_i64();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_f32(&mut self) -> Option<f32> {
+        let rpos = self.get_rpos();
+        let result = self.pop_f32();
+        self.set_rpos(rpos);
+        result
+    }
+
+    fn peek_f64(&mut self) -> Option<f64> {
+        let rpos = self.get_rpos();
+        let result = self.pop_f64();
+        self.set_rpos(rpos);
+        result
     }
 }
 
@@ -688,18 +829,40 @@ pub mod custom {
         Ok(vec)
     }
     
-    pub fn no_length_vec_save<T: Savable>(saver: &mut impl Saver, vec: &Vec<T>) {
+    pub fn raw_vec_save<T: Savable>(saver: &mut impl Saver, vec: &Vec<T>) {
         for t in vec {
             t.save(saver);
         }
+    }
+    
+    pub fn raw_vec_load<T: Savable>(loader: &mut impl Loader) -> Result<Vec<T>, String> {
+        let mut vec = Vec::new();
+        while let Ok(t) = T::load(loader) {
+            vec.push(t);
+        }
+        Ok(vec)
+    }
+    
+    pub fn raw_bytes_save(saver: &mut impl Saver, vec: &Vec<u8>) {
+        saver.push_bytes(&vec);
+    }
+    
+    pub fn raw_bytes_load(loader: &mut impl Loader) -> Result<Vec<u8>, String> {
+        loader.pop_to_end().ok_or("Failed to load bytes from loader!".to_string())
     }
     
     pub fn empty_vec_load<T>(_: &mut impl Loader) -> Result<Vec<T>, String> {
         Ok(Vec::new())
     }
     
+    pub fn ignore_save<T>(_: &mut impl Saver, _: &T) {}
+    
     pub fn save<T: Savable>(saver: &mut impl Saver, item: &T) {
         item.save(saver);
+    }
+    
+    pub fn load_default<T: Default>(_: &mut impl Loader) -> Result<T, String> {
+        Ok(T::default())
     }
     
     pub fn load<T: Savable>(loader: &mut impl Loader) -> Result<T, String> {
