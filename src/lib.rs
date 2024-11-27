@@ -4,8 +4,6 @@ pub mod hashers;
 pub mod once;
 pub mod print;
 pub mod remake;
-#[cfg(feature = "savable_arc")]
-pub mod savable_arc;
 pub mod save;
 pub mod static_vec;
 pub mod thread;
@@ -13,6 +11,10 @@ pub mod unsafe_utils;
 pub mod utils;
 pub mod version;
 pub mod state;
+pub mod bytebuffer;
+
+#[cfg(feature = "savable_arc")]
+pub mod savable_arc;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
@@ -165,6 +167,7 @@ mod tests {
     }
 
     use mvutils::save::custom::{string8_load, string8_save};
+    use crate::bytebuffer::ByteBufferExtras;
 
     #[derive(Savable, Debug, Eq, PartialEq)]
     struct ShortString(
@@ -241,5 +244,15 @@ mod tests {
 
         let test2 = <[i32; 15]>::load(&mut buffer).unwrap();
         assert_eq!(test2, test);
+    }
+
+    #[test]
+    fn test_bytebuffer_features() {
+        let mut buffer = ByteBuffer::new_le();
+        buffer.push_u16(0x1000);
+        assert_eq!(buffer.as_bytes(), &[0x00, 0x10]);
+
+        let mut buffer = ByteBuffer::from_vec_le(buffer.into_vec());
+        assert_eq!(buffer.pop_u16(), Some(0x1000));
     }
 }
