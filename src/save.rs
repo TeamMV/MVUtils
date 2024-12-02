@@ -137,7 +137,7 @@ impl Saver for ByteBuffer {
     }
 
     fn push_bool(&mut self, bool: bool) {
-        self.write_bit(bool);
+        self.write_u8(if bool { 1 } else { 0 });
     }
 
     fn push_u8(&mut self, value: u8) {
@@ -195,7 +195,7 @@ impl Loader for ByteBuffer {
     }
 
     fn pop_bool(&mut self) -> Option<bool> {
-        self.read_bit().ok()
+        self.read_u8().ok().map(|v| v != 0)
     }
 
     fn pop_u8(&mut self) -> Option<u8> {
