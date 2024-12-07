@@ -1,4 +1,5 @@
 use std::hash::{BuildHasher, Hasher};
+use std::mem;
 
 #[derive(Default)]
 #[repr(transparent)]
@@ -121,5 +122,30 @@ impl BuildHasher for I32IdentityHasher {
 
     fn build_hasher(&self) -> Self::Hasher {
         Self::default()
+    }
+}
+
+pub struct UsizeIdentityHasher {
+    value: usize,
+}
+
+impl Hasher for UsizeIdentityHasher {
+    fn finish(&self) -> u64 {
+        todo!()
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        unreachable!()
+    }
+
+    fn write_usize(&mut self, u: usize) {
+        unsafe {
+            #[cfg(target_pointer_width = "64")] {
+                self.write_u64(mem::transmute::<usize, u64>(u));
+            }
+            #[cfg(target_pointer_width = "32")] {
+                self.write_u64(mem::transmute::<usize, u32>(u));
+            }
+        }
     }
 }
