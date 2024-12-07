@@ -125,13 +125,14 @@ impl BuildHasher for I32IdentityHasher {
     }
 }
 
+#[derive(Default)]
 pub struct UsizeIdentityHasher {
     value: usize,
 }
 
 impl Hasher for UsizeIdentityHasher {
     fn finish(&self) -> u64 {
-        todo!()
+        self.value as u64
     }
 
     fn write(&mut self, bytes: &[u8]) {
@@ -139,13 +140,14 @@ impl Hasher for UsizeIdentityHasher {
     }
 
     fn write_usize(&mut self, u: usize) {
-        unsafe {
-            #[cfg(target_pointer_width = "64")] {
-                self.write_u64(mem::transmute::<usize, u64>(u));
-            }
-            #[cfg(target_pointer_width = "32")] {
-                self.write_u64(mem::transmute::<usize, u32>(u));
-            }
-        }
+        self.value = u;
+    }
+}
+
+impl BuildHasher for UsizeIdentityHasher {
+    type Hasher = Self;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        Self::Hasher::default()
     }
 }
