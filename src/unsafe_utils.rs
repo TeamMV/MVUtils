@@ -79,7 +79,7 @@ impl<T> UnsafeRef<T> {
     /// # Safety
     /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
     /// the rest of the program.
-    pub unsafe fn as_static_mut(&mut self) -> &'static T {
+    pub unsafe fn as_static_mut(&mut self) -> &'static mut T {
         (self.ptr as *mut T)
             .as_mut()
             .expect("Failed to dereference UnsafeRef, perhaps the value has been dropped.")
