@@ -54,14 +54,10 @@ impl<T> State<T> {
     pub fn map<U>(&self, mapper: fn(&T) -> U) -> MappedState<T, U> {
         MappedState::new(mapper, self.clone())
     }
-
-    pub fn map_identity(&self) -> MappedState<T, T> {
-        MappedState::new(|x| x, self.clone())
-    }
 }
 
 impl<T: Clone> State<T> {
-    pub fn map_identity_cloned(&self) -> MappedState<T, T> {
+    pub fn map_identity(&self) -> MappedState<T, T> {
         MappedState::new(|x| x.clone(), self.clone())
     }
 }
