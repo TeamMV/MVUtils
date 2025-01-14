@@ -131,3 +131,62 @@ macro_rules! update {
     };
     ([]) => {};
 }
+
+pub struct MappedState<T, U> {
+    mapper: fn(&T) -> U,
+    old: State<T>,
+}
+
+impl<T, U> MappedState<T, U> {
+    pub fn new(mapper: fn(&T) -> U, state: State<T>) -> Self {
+        Self {
+            mapper,
+            old: state,
+        }
+    }
+
+    pub fn read(&self) -> MappedStateReadGuard<'_, T, U> {
+        let guard = self.old.read();
+        MappedStateReadGuard {
+            mapped: (self.mapper)(guard.deref()),
+            rwlock_guard: guard,
+        }
+    }
+
+    pub fn get_version(&self) -> u64 {
+        self.old.inner.0.get_val()
+    }
+
+    pub fn get_local_version(&self) -> u64 {
+        self.old.local_version.get_val()
+    }
+
+    pub fn is_outdated(&self) -> bool {
+        self.old.inner.0.get_val() != self.old.local_version.get_val()
+    }
+
+    pub fn update(&self) {
+        self.old.local_version.replace(self.old.inner.0.get_val());
+    }
+
+    pub fn force_outdated(&self) {
+        if self.old.inner.0.get_val() == 0 {
+            self.old.local_version.replace(u64::MAX);
+        } else {
+            self.old.local_version.replace(0);
+        }
+    }
+}
+
+pub struct MappedStateReadGuard<'a, T, U> {
+    mapped: U,
+    rwlock_guard: RwLockReadGuard<'a, T>
+}
+
+impl<'a, T, U> Deref for MappedStateReadGuard<'a, T, U> {
+    type Target = U;
+
+    fn deref(&self) -> &Self::Target {
+        &self.mapped
+    }
+}
