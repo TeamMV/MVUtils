@@ -50,6 +50,20 @@ impl<T> State<T> {
             self.local_version.replace(0);
         }
     }
+
+    pub fn map<U>(&self, mapper: fn(&T) -> U) -> MappedState<T, U> {
+        MappedState::new(mapper, self.clone())
+    }
+
+    pub fn map_identity(&self) -> MappedState<T, T> {
+        MappedState::new(|x| x, self.clone())
+    }
+}
+
+impl<T: Clone> State<T> {
+    pub fn map_identity_cloned(&self) -> MappedState<T, T> {
+        MappedState::new(|x| x.clone(), self.clone())
+    }
 }
 
 unsafe impl<T> Send for State<T> {}
