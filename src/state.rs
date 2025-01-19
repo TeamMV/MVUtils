@@ -142,6 +142,7 @@ macro_rules! update {
     ([]) => {};
 }
 
+#[derive(Clone)]
 pub struct MappedState<T, U> {
     mapper: fn(&T) -> U,
     old: State<T>,
