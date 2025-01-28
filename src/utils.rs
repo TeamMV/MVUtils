@@ -1,8 +1,8 @@
 use crate::lazy;
-use num_traits::One;
+use num_traits::{Num, One, ToPrimitive};
 use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::ops::Range;
+use std::ops::{MulAssign, Range};
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::panic::PanicHookInfo;
 use std::sync::{Arc, LockResult, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -799,3 +799,29 @@ pub trait PClamp {
 }
 
 impl<T: PartialOrd> PClamp for T {}
+
+pub trait Factorial {
+    fn fact(&self) -> Self;
+}
+
+impl<T> Factorial for T
+where
+    T: Num + MulAssign + AddAssign + Copy + PartialOrd,
+{
+    fn fact(&self) -> Self {
+        let mut res = T::one();
+        let mut i = T::one() + T::one();
+        while i <= *self {
+            res *= i;
+            i += T::one();
+        }
+        res
+    }
+}
+
+pub fn lerp<T>(near: T, far: T, p: f64) -> f64
+where
+    T: ToPrimitive + Copy,
+{
+    near.to_f64().unwrap_or(0.0) + far.to_f64().unwrap_or(0.0) * p
+}
