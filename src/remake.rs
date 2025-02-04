@@ -26,7 +26,7 @@ impl<T> Remake<T> {
         self.item.expect("Remake item should never be None")
     }
 
-    pub fn replace<F: Fn(T) -> T>(&mut self, function: F) {
+    pub fn replace<F: FnOnce(T) -> T>(&mut self, function: F) {
         self.item = Some(function(
             self.item.take().expect("Remake item should never be None"),
         ));

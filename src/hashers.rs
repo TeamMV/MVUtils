@@ -1,5 +1,4 @@
 use std::hash::{BuildHasher, Hasher};
-use std::mem;
 
 #[derive(Default)]
 #[repr(transparent)]
