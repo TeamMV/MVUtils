@@ -84,6 +84,7 @@ mod tests {
     }
 
     #[derive(Savable, Debug)]
+    #[varint]
     enum E {
         A,
         B(String, #[unsaved] u32, #[custom(save = hello, load = world)] i32),

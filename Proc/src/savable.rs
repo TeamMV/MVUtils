@@ -222,9 +222,11 @@ pub fn unit(name: Ident, generics: Generics) -> TokenStream {
     TokenStream::from(implementation)
 }
 
-pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream {
+pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics, varint: bool) -> TokenStream {
     let len = e.variants.len();
-    let id_ty = if len < 256 {
+    let id_ty = if varint {
+        quote! { u64 }
+    } else if len < 256 {
         quote! { u8 }
     } else if len < 65536 {
         quote! { u16 }
@@ -234,6 +236,11 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
 
     let save = e.variants.iter().enumerate().map(|(i, v)| {
         let ident = &v.ident;
+        let save_variant = if varint {
+            quote! { mvutils::save::custom::varint_save(saver, &(#i as u64)) }
+        } else {
+            quote! { mvutils::save::Savable::save(&(#i as #id_ty), saver) }
+        };
         match &v.fields {
             Fields::Named(fields) => {
                 let names = fields.named.iter().map(|f| {
@@ -262,7 +269,7 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
 
                 quote! {
                     #name::#ident { #( #names ),* } => {
-                        mvutils::save::Savable::save(&(#i as #id_ty), saver);
+                        #save_variant;
                         #( #saves )*
                     }
                 }
@@ -298,14 +305,14 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
 
                 quote! {
                     #name::#ident( #( #names ),* ) => {
-                        mvutils::save::Savable::save(&(#i as #id_ty), saver);
+                        #save_variant;
                         #( #saves )*
                     },
                 }
             }
             Fields::Unit => {
                 quote! {
-                    #name::#ident => mvutils::save::Savable::save(&(#i as #id_ty), saver),
+                    #name::#ident => #save_variant,
                 }
             }
         }
@@ -427,6 +434,12 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    let load_variant = if varint {
+        quote! { mvutils::save::custom::varint_load(loader)? }
+    } else {
+        quote! { #id_ty::load(loader)? }
+    };
+
     let implementation = quote! {
         impl #impl_generics mvutils::save::Savable for #name #ty_generics #where_clause {
             fn save(&self, saver: &mut impl mvutils::save::Saver) {
@@ -436,7 +449,7 @@ pub fn enumerator(e: &DataEnum, name: Ident, generics: Generics) -> TokenStream 
             }
 
             fn load(loader: &mut impl mvutils::save::Loader) -> Result<Self, String> {
-                match #id_ty::load(loader)? as u32 {
+                match #load_variant as u32 {
                     #( #load )*
                     _ => Err(format!("Failed to load {} from loader!", stringify!(#name)))
                 }

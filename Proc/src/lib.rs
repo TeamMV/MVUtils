@@ -4,16 +4,24 @@ use crate::savable::{enumerator, named, unit, unnamed};
 use proc_macro::TokenStream;
 use std::str::FromStr;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, Meta};
 
 mod savable;
 
-#[proc_macro_derive(Savable, attributes(unsaved, custom))]
+#[proc_macro_derive(Savable, attributes(unsaved, custom, varint))]
 pub fn derive_savable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident;
     let generics = input.generics;
+
+    let varint = input.attrs.iter().any(|attr| {
+        if let Meta::Path(ref p) = attr.meta {
+            p.segments.iter().any(|s| s.ident == "varint")
+        } else {
+            false
+        }
+    });
 
     match &input.data {
         Data::Struct(s) => match &s.fields {
@@ -21,7 +29,7 @@ pub fn derive_savable(input: TokenStream) -> TokenStream {
             Fields::Unnamed(fields) => unnamed(fields, name, generics),
             Fields::Unit => unit(name, generics),
         },
-        Data::Enum(e) => enumerator(e, name, generics),
+        Data::Enum(e) => enumerator(e, name, generics, varint),
         Data::Union(_) => panic!("Deriving Savable for unions is not supported!"),
     }
 }

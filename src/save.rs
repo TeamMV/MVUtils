@@ -357,6 +357,82 @@ impl_savable_primitive!(
     i64, push_i64, pop_i64, f32, push_f32, pop_f32, f64, push_f64, pop_f64
 );
 
+impl Savable for usize {
+    fn save(&self, saver: &mut impl Saver) {
+        let mut value = *self;
+        loop {
+            let mut byte = (value & 0x7F) as u8;
+            value >>= 7;
+            if value != 0 {
+                byte |= 0x80;
+            }
+            saver.push_u8(byte);
+            if value == 0 {
+                break;
+            }
+        }
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let mut result: usize = 0;
+        let mut shift = 0;
+        let usize_bits = size_of::<usize>() * 8;
+
+        loop {
+            if shift >= usize_bits {
+                return Err("Failed to load usize: Incompatible system bitness".to_string());
+            }
+            let byte = u8::load(loader)?;
+            result |= ((byte & 0x7F) as usize) << shift;
+            if (byte & 0x80) == 0 {
+                break;
+            }
+            shift += 7;
+        }
+        Ok(result)
+    }
+}
+
+impl Savable for isize {
+    fn save(&self, saver: &mut impl Saver) {
+        let bits = size_of::<isize>() * 8;
+        let zigzag = ( (*self as usize) << 1 ) ^ (((*self) >> (bits - 1)) as usize);
+        let mut value = zigzag;
+
+        loop {
+            let mut byte = (value & 0x7F) as u8;
+            value >>= 7;
+            if value != 0 {
+                byte |= 0x80;
+            }
+            saver.push_u8(byte);
+            if value == 0 {
+                break;
+            }
+        }
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let mut result: usize = 0;
+        let mut shift = 0;
+        let usize_bits = size_of::<usize>() * 8;
+
+        loop {
+            if shift >= usize_bits {
+                return Err("Failed to load isize: Incompatible system bitness".to_string());
+            }
+            let byte = u8::load(loader)?;
+            result |= ((byte & 0x7F) as usize) << shift;
+            if (byte & 0x80) == 0 {
+                break;
+            }
+            shift += 7;
+        }
+        let value = ((result >> 1) as isize) ^ (-((result & 1) as isize));
+        Ok(value)
+    }
+}
+
 macro_rules! impl_savable_tuple {
     () => {};
     ($first:ident $($rest:ident)*) => {
@@ -867,6 +943,66 @@ pub mod custom {
     
     pub fn load<T: Savable>(loader: &mut impl Loader) -> Result<T, String> {
         T::load(loader)
+    }
+
+    pub fn varint_save(saver: &mut impl Saver, value: &u64) {
+        let mut value = *value;
+        loop {
+            let mut byte = (value & 0x7F) as u8;
+            value >>= 7;
+            if value != 0 {
+                byte |= 0x80;
+            }
+            saver.push_u8(byte);
+            if value == 0 {
+                break;
+            }
+        }
+    }
+
+    pub fn varint_load(loader: &mut impl Loader) -> Result<u64, String> {
+        let mut result: u64 = 0;
+        let mut shift = 0;
+        while shift < 64 {
+            let byte = u8::load(loader)?;
+            result |= ((byte & 0x7F) as u64) << shift;
+            if (byte & 0x80) == 0 {
+                return Ok(result);
+            }
+            shift += 7;
+        }
+        Err("Varint larger than 64 bits".to_string())
+    }
+
+    pub fn varint_signed_save(saver: &mut impl Saver, value: &i64) {
+        let zigzag = ((*value << 1) ^ (*value >> 63)) as u64;
+        let mut value = zigzag;
+        loop {
+            let mut byte = (value & 0x7F) as u8;
+            value >>= 7;
+            if value != 0 {
+                byte |= 0x80;
+            }
+            saver.push_u8(byte);
+            if value == 0 {
+                break;
+            }
+        }
+    }
+    
+    pub fn varint_signed_load(loader: &mut impl Loader) -> Result<i64, String> {
+        let mut result: u64 = 0;
+        let mut shift = 0;
+        while shift < 64 {
+            let byte = u8::load(loader)?;
+            result |= ((byte & 0x7F) as u64) << shift;
+            if (byte & 0x80) == 0 {
+                let value = ((result >> 1) as i64) ^ (-((result & 1) as i64));
+                return Ok(value);
+            }
+            shift += 7;
+        }
+        Err("Varint larger than 64 bits".to_string())
     }
 }
 
