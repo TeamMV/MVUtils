@@ -12,6 +12,7 @@ pub mod utils;
 pub mod version;
 pub mod state;
 pub mod bytebuffer;
+pub mod clock;
 
 #[cfg(feature = "savable_arc")]
 pub mod savable_arc;
