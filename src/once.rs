@@ -285,6 +285,12 @@ impl<T: Default> CreateOnce<T> {
     }
 }
 
+impl<T> Default for CreateOnce<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Deref for CreateOnce<T> {
     type Target = T;
 
