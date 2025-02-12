@@ -291,6 +291,16 @@ impl<T> Default for CreateOnce<T> {
     }
 }
 
+impl<T: Clone> Clone for CreateOnce<T> {
+    fn clone(&self) -> Self {
+        Self {
+            value: UnsafeCell::new(unsafe { &*self.value.get() }.clone()),
+            once: Once::new(),
+            init_called: AtomicBool::new(self.init_called.load(Ordering::Relaxed)),
+        }
+    }
+}
+
 impl<T> Deref for CreateOnce<T> {
     type Target = T;
 
