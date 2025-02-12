@@ -1,5 +1,9 @@
 use std::time::{Duration, Instant};
+use mvutils_proc_macro::Savable;
 
+use crate as mvutils;
+
+#[derive(Clone, Savable, Debug)]
 pub struct Clock {
     last_tick: Instant,
     tick: Duration,
