@@ -1,5 +1,6 @@
 #![feature(array_try_from_fn)]
 
+pub mod args;
 pub mod hashers;
 pub mod once;
 pub mod print;
@@ -16,7 +17,6 @@ pub mod clock;
 
 #[cfg(feature = "savable_arc")]
 pub mod savable_arc;
-mod args;
 
 pub use mvutils_proc_macro::{try_from_string, Savable};
 
