@@ -839,3 +839,26 @@ where
 {
     near.to_f64().unwrap_or(0.0) + far.to_f64().unwrap_or(0.0) * p
 }
+
+pub trait MapTo {
+    fn map_to(self, amount: u32) -> u32;
+}
+
+impl MapTo for f64 {
+    fn map_to(self, amount: u32) -> u32 {
+        (self * amount as f64) as u32
+    }
+}
+
+pub trait ExpectUnformatted<T> {
+    fn expect2(self, msg: &str) -> T;
+}
+
+impl<T, E> ExpectUnformatted<T> for Result<T, E> {
+    fn expect2(self, msg: &str) -> T {
+        if let Ok(t) = self {
+            return t;
+        }
+        panic!("{msg}");
+    }
+}
