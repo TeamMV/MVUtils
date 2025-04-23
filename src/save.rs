@@ -1,7 +1,7 @@
 use std::cell::{Cell, UnsafeCell};
 use std::hash::Hash;
 use bytebuffer::ByteBuffer;
-use std::ops::{Deref, Range, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
+use std::ops::{Bound, Deref, Range, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
 use std::time::{Duration, Instant, SystemTime};
 use hashbrown::{HashMap, HashSet};
 use parking_lot::{Mutex, RwLock};
@@ -789,6 +789,32 @@ impl<T: Savable> Savable for Cell<T> {
 
     fn load(loader: &mut impl Loader) -> Result<Self, String> {
         Ok(Cell::new(T::load(loader)?))
+    }
+}
+
+impl<T: Savable> Savable for Bound<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        match self {
+            Bound::Included(t) => {
+                saver.push_u8(0);
+                t.save(saver);
+            }
+            Bound::Excluded(t) => {
+                saver.push_u8(1);
+                t.save(saver);
+            }
+            Bound::Unbounded => saver.push_u8(2),
+        }
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let variant = u8::load(loader)?;
+        match variant {
+            0 => Ok(Bound::Included(T::load(loader)?)),
+            1 => Ok(Bound::Excluded(T::load(loader)?)),
+            2 => Ok(Bound::Unbounded),
+            _ => Err("Failed to load Bound from Loader!".to_string()),
+        }
     }
 }
 
