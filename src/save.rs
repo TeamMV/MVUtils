@@ -5,6 +5,7 @@ use std::ops::{Bound, Deref, Range, RangeFrom, RangeInclusive, RangeTo, RangeToI
 use std::time::{Duration, Instant, SystemTime};
 use hashbrown::{HashMap, HashSet};
 use parking_lot::{Mutex, RwLock};
+use crate::bytebuffer::ByteBufferExtras;
 use crate::utils::Recover;
 
 pub trait Saver {
@@ -333,6 +334,18 @@ pub trait Savable: Sized {
         self.save(saver);
     }
     fn load(loader: &mut impl Loader) -> Result<Self, String>;
+}
+
+pub trait Interpret {
+    fn interpret<As: Savable>(self) -> Result<As, String>;
+}
+
+impl<T> Interpret for T where T: IntoIterator<Item=u8> {
+    fn interpret<As: Savable>(self) -> Result<As, String> {
+        let vec: Vec<u8> = self.into_iter().collect();
+        let mut buffer = ByteBuffer::from_vec_le(vec);
+        As::load(&mut buffer)
+    }
 }
 
 macro_rules! impl_savable_primitive {

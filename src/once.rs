@@ -187,6 +187,14 @@ impl<T> CreateOnce<T> {
             init_called: AtomicBool::new(false),
         }
     }
+    
+    pub const fn new_created(t: T) -> Self {
+        Self {
+            value: UnsafeCell::new(Some(t)),
+            once: Once::new(),
+            init_called: AtomicBool::new(true),
+        }
+    }
 
     pub fn created(&self) -> bool {
         self.init_called.load(Ordering::Relaxed)
@@ -362,6 +370,13 @@ impl<T> Lazy<T> {
         Self {
             value: CreateOnce::new(),
             init: Mutex::new(Some(f)),
+        }
+    }
+    
+    pub const fn new_initialized(t: T) -> Self {
+        Lazy {
+            value: CreateOnce::new_created(t),
+            init: Mutex::new(None),
         }
     }
 

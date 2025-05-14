@@ -312,6 +312,18 @@ macro_rules! enum_val_ref {
     };
 }
 
+#[macro_export]
+macro_rules! enum_val_ref_mut {
+    (
+        $en:ident, $inp:ident, $var:tt
+    ) => {{
+        match $inp {
+            $en::$var(ref mut i) => i,
+            _ => panic!("Illegal Variant"),
+        }
+    }};
+}
+
 pub trait SplitSized {
     fn split_sized(&self, n: usize) -> Vec<Self>
     where
@@ -860,5 +872,24 @@ impl<T, E> ExpectUnformatted<T> for Result<T, E> {
             return t;
         }
         panic!("{msg}");
+    }
+}
+
+pub trait CloneableFn<T>: Fn(T) + Send + Sync {
+    fn clone_box(&self) -> Box<dyn CloneableFn<T>>;
+}
+
+impl<T, I> CloneableFn<I> for T
+where
+    T: 'static + Fn(I) + Clone + Send + Sync,
+{
+    fn clone_box(&self) -> Box<dyn CloneableFn<I>> {
+        Box::new(self.clone())
+    }
+}
+
+impl<I: 'static> Clone for Box<dyn CloneableFn<I>> {
+    fn clone(&self) -> Box<dyn CloneableFn<I>> {
+        self.clone_box()
     }
 }

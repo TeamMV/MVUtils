@@ -63,3 +63,28 @@ macro_rules! thread_unique {
         )*
     };
 }
+
+pub struct ThreadSafe<T> {
+    inner: T
+}
+
+impl<T> ThreadSafe<T> {
+    pub fn new(inner: T) -> Self {
+        Self { inner }
+    }
+
+    pub fn as_ref(&self) -> &T {
+        &self.inner
+    }
+
+    pub fn as_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
+}
+
+unsafe impl<T> Send for ThreadSafe<T> {}
+unsafe impl<T> Sync for ThreadSafe<T> {}
