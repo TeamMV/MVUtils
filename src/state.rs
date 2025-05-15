@@ -164,6 +164,13 @@ impl<T, U> MappedState<T, U> {
         }
     }
 
+    pub fn write(&self) -> StateWriteGuard<T> {
+        StateWriteGuard {
+            inner: self.old.inner.1.write(),
+            ptr: self.old.inner.0.get_mut(),
+        }
+    }
+
     pub fn get_version(&self) -> u64 {
         self.old.inner.0.get_val()
     }
