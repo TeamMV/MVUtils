@@ -18,17 +18,17 @@ pub mod clock;
 #[cfg(feature = "savable_arc")]
 pub mod savable_arc;
 
-pub use mvutils_proc_macro::{try_from_string, Savable};
+pub use mvutils_proc_macro::{TryFromString, Savable};
 
 #[cfg(test)]
 #[allow(dead_code)]
 mod tests {
-    use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut};
     use std::thread::sleep;
     use std::time::{Duration, SystemTime};
     use crate as mvutils;
     use bytebuffer::ByteBuffer;
-    use mvutils_proc_macro::try_from_string;
+    use mvutils_proc_macro::{TryFromString};
     use mvutils_proc_macro::Savable;
     use crate::state::State;
     use crate::{update, when};
@@ -99,12 +99,23 @@ mod tests {
         },
     }
 
-    #[try_from_string]
+    #[derive(Debug, TryFromString)]
     enum Enum {
         A,
         B,
         C,
+        #[exclude]
         HelloWorld,
+    }
+
+    #[test]
+    fn test_try_from_string() {
+        let a = Enum::try_from("a".to_string()).unwrap();
+        println!("{:?}", a);
+        let b = Enum::try_from("B".to_string()).unwrap();
+        println!("{:?}", b);
+        let hello = Enum::try_from("HelloWorld".to_string());
+        assert!(hello.is_err());
     }
 
     #[test]
