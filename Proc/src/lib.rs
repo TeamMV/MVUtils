@@ -65,11 +65,11 @@ pub fn try_from_string(input: TokenStream) -> TokenStream {
                 proc_macro2::TokenStream::from_str(&s).unwrap()
             });
             quote! {
-                impl core::convert::TryFrom<String> for #name {
-                    type Error = ();
+                impl core::str::FromStr for #name {
+                    type Err = ();
 
-                    fn try_from(value: String) -> Result<Self, Self::Error> {
-                        match value.as_str() {
+                    fn from_str(value: &str) -> Result<Self, Self::Err> {
+                        match value {
                             #( #values )*
                             _ => Err(())
                         }

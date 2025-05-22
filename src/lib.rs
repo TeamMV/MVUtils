@@ -24,6 +24,7 @@ pub use mvutils_proc_macro::{TryFromString, Savable};
 #[allow(dead_code)]
 mod tests {
 use std::ops::{Deref, DerefMut};
+    use std::str::FromStr;
     use std::thread::sleep;
     use std::time::{Duration, SystemTime};
     use crate as mvutils;
@@ -110,11 +111,11 @@ use std::ops::{Deref, DerefMut};
 
     #[test]
     fn test_try_from_string() {
-        let a = Enum::try_from("a".to_string()).unwrap();
+        let a = Enum::from_str("a").unwrap();
         println!("{:?}", a);
-        let b = Enum::try_from("B".to_string()).unwrap();
+        let b = Enum::from_str("B").unwrap();
         println!("{:?}", b);
-        let hello = Enum::try_from("HelloWorld".to_string());
+        let hello = Enum::from_str("HelloWorld");
         assert!(hello.is_err());
     }
 
