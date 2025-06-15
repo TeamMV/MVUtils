@@ -773,6 +773,33 @@ impl<T> From<T> for DangerousCell<T> {
     }
 }
 
+
+// TODO: same macroize needed as thread safe here plz asap when v22 is not rushing me
+// also a lot of traits missing
+impl<T: Debug> Debug for DangerousCell<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self.get(), f)
+    }
+}
+
+impl<T: Display> Display for DangerousCell<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self.get(), f)
+    }
+}
+
+impl<T: Clone> Clone for DangerousCell<T> {
+    fn clone(&self) -> Self {
+        DangerousCell::new(self.get().clone())
+    }
+}
+
+impl<T: Default> Default for DangerousCell<T> {
+    fn default() -> Self {
+        DangerousCell::new(Default::default())
+    }
+}
+
 /// A copy of the [`From<T>`] trait, but for types where this operation is unsafe.
 ///
 /// # Safety
