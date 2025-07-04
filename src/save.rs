@@ -831,6 +831,17 @@ impl<T: Savable> Savable for Bound<T> {
     }
 }
 
+#[cfg(feature = "save_str")]
+impl Savable for &str {
+    fn save(&self, saver: &mut impl Saver) {
+        saver.push_string(self);
+    }
+
+    fn load(_: &mut impl Loader) -> Result<Self, String> {
+        Err("&str may not be loaded, this is part of unstable feature 'save_str'".to_string())
+    }
+}
+
 pub mod custom {
     use crate::save::{Loader, Savable, Saver};
 
