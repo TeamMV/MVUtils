@@ -4,11 +4,11 @@ use crate::once::Lazy;
 use crate::utils::Recover;
 use hashbrown::HashMap;
 use std::ops::{Deref, DerefMut};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::thread::ThreadId;
 
 pub struct ThreadUnique<T> {
-    inner: Lazy<Mutex<HashMap<ThreadId, T>>>,
+    inner: Lazy<Mutex<HashMap<ThreadId, Arc<Mutex<T>>>>>,
     gen: fn() -> T,
 }
 
@@ -20,13 +20,11 @@ impl<T> ThreadUnique<T> {
         }
     }
 
-    #[allow(clippy::mut_from_ref)]
-    pub fn get(&self) -> &mut T {
+    pub fn get(&self) -> Arc<Mutex<T>> {
         let mut inner = self.inner.lock().recover();
-        let ptr = inner
+        inner
             .entry(std::thread::current().id())
-            .or_insert((self.gen)()) as *mut T;
-        unsafe { ptr.as_mut().unwrap() }
+            .or_insert(Arc::new(Mutex::new((self.gen)()))).clone()
     }
 }
 
