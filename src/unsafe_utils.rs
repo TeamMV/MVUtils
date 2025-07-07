@@ -44,7 +44,9 @@ impl<T> UnsafeRef<T> {
     ///
     /// It does **not** check if the memory is valid, aligned, or initialized.
     pub fn is_null(&self) -> bool {
-        !self.ptr.is_null()
+        unsafe {
+            !self.ptr.is_null()
+        }
     }
 
     /// Reinterpret the value at this pointer as another type. This does not cast, it just assumes
@@ -66,7 +68,9 @@ impl<T> UnsafeRef<T> {
     /// This compares the raw pointers, not the pointee values, true will only be returned if both
     /// refs point to the same memory address
     pub fn same_as<R>(&self, other: &UnsafeRef<R>) -> bool {
-        self.ptr == other.ptr
+        unsafe {
+            self.ptr == other.ptr
+        }
     }
 
     /// Reinterpret the bytes at this pointer as a reference. This does not change the bytes at the
@@ -106,8 +110,10 @@ unsafe impl<T> UnsafeFrom<&T> for UnsafeRef<T> {
 
 impl<T> Clone for UnsafeRef<T> {
     fn clone(&self) -> Self {
-        Self {
-            ptr: self.ptr,
+        unsafe {
+            Self {
+                ptr: self.ptr,
+            }
         }
     }
 }

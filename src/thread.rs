@@ -29,16 +29,16 @@ impl<T> ThreadUnique<T> {
 }
 
 impl<T> Deref for ThreadUnique<T> {
-    type Target = T;
+    type Target = Arc<Mutex<T>>;
 
     fn deref(&self) -> &Self::Target {
-        self.get()
+        &self.get()
     }
 }
 
 impl<T> DerefMut for ThreadUnique<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.get()
+        &mut self.get()
     }
 }
 
