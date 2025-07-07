@@ -1,11 +1,11 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use crate::once::Lazy;
-use crate::utils::Recover;
 use hashbrown::HashMap;
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::thread::ThreadId;
+use parking_lot::Mutex;
 
 pub struct ThreadUnique<T> {
     inner: Lazy<Mutex<HashMap<ThreadId, Arc<Mutex<T>>>>>,
@@ -21,7 +21,7 @@ impl<T> ThreadUnique<T> {
     }
 
     pub fn get(&self) -> Arc<Mutex<T>> {
-        let mut inner = self.inner.lock().recover();
+        let mut inner = self.inner.lock();
         inner
             .entry(std::thread::current().id())
             .or_insert(Arc::new(Mutex::new((self.gen)()))).clone()
@@ -50,25 +50,23 @@ macro_rules! thread_unique {
     };
 }
 
-pub struct ThreadSafe<T> {
-    inner: T
-}
+pub struct ThreadSafe<T>(T);
 
 impl<T> ThreadSafe<T> {
     pub fn new(inner: T) -> Self {
-        Self { inner }
+        Self(inner)
     }
 
     pub fn as_ref(&self) -> &T {
-        &self.inner
+        &self.0
     }
 
     pub fn as_mut(&mut self) -> &mut T {
-        &mut self.inner
+        &mut self.0
     }
 
     pub fn into_inner(self) -> T {
-        self.inner
+        self.0
     }
 }
 
@@ -92,7 +90,7 @@ impl<T> DerefMut for ThreadSafe<T> {
 
 impl<T: Debug> Debug for ThreadSafe<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(&self.inner, f)
+        Debug::fmt(&self.0, f)
     }
 }
 
@@ -104,13 +102,13 @@ impl<T: Default> Default for ThreadSafe<T> {
 
 impl<T: Clone> Clone for ThreadSafe<T> {
     fn clone(&self) -> Self {
-        Self::new(self.inner.clone())
+        Self::new(self.0.clone())
     }
 }
 
 impl<T: PartialEq> PartialEq for ThreadSafe<T> {
     fn eq(&self, other: &Self) -> bool {
-        PartialEq::eq(&self.inner, &other.inner)
+        PartialEq::eq(&self.0, &other.0)
     }
 }
 
@@ -118,24 +116,24 @@ impl<T: Eq> Eq for ThreadSafe<T> {}
 
 impl<T: PartialOrd> PartialOrd for ThreadSafe<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        PartialOrd::partial_cmp(&self.inner, &other.inner)
+        PartialOrd::partial_cmp(&self.0, &other.0)
     }
 }
 
 impl<T: Ord> Ord for ThreadSafe<T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        Ord::cmp(&self.inner, &other.inner)
+        Ord::cmp(&self.0, &other.0)
     }
 }
 
 impl<T: Hash> Hash for ThreadSafe<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        Hash::hash(&self.inner, state)
+        Hash::hash(&self.0, state)
     }
 }
 
 impl<T: Display> Display for ThreadSafe<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.inner, f)
+        Display::fmt(&self.0, f)
     }
 }

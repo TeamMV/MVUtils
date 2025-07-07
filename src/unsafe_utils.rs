@@ -95,7 +95,7 @@ impl<T> UnsafeRef<T> {
     /// # Safety
     /// It is entirely up to the user to ensure that the pointer is valid.
     #[must_use]
-    pub unsafe fn as_mut<'a>(&self) -> &'a mut T {
+    pub unsafe fn as_mut<'a>(&mut self) -> &'a mut T {
         (self.ptr as *mut T)
             .as_mut()
             .expect("Failed to dereference UnsafeRef.")
@@ -128,6 +128,7 @@ impl Unsafe {
     /// It is entirely up to the user to ensure that the pointer is valid, and that both types [`T`]
     /// and [`R`] are of the same size and alignment.
     #[track_caller]
+    #[must_use]
     pub unsafe fn cast_ref<T: Sized, R: Sized>(value: &T) -> &R {
         (value as *const T as *const R).as_ref().unwrap()
     }
@@ -140,6 +141,7 @@ impl Unsafe {
     /// and [`R`] are of the same size and alignment. Additionally, the user must gurantee that
     /// the original reference is not aliased after this is called.
     #[track_caller]
+    #[must_use]
     pub unsafe fn cast_mut<T: Sized, R: Sized>(value: &mut T) -> &mut R {
         (value as *mut T as *mut R).as_mut().unwrap()
     }
@@ -149,9 +151,10 @@ impl Unsafe {
     ///
     /// # Safety
     /// It is entirely up to the user to ensure that the pointer is valid, and will remain valid for
-    /// the rest of the program.
+    /// the duration of the new lifetime.
     #[track_caller]
-    pub unsafe fn cast_static<'a, T>(value: &'a T) -> &'static T {
+    #[must_use]
+    pub unsafe fn cast_lifetime<'a, 'b, T>(value: &'a T) -> &'b T {
         (value as *const T).as_ref().unwrap()
     }
 
@@ -160,32 +163,23 @@ impl Unsafe {
     ///
     /// # Safety
     /// It is entirely up to the user to ensure that the pointer is valid, and will remain valid for
-    /// the rest of the program.
+    /// the duration of the new lifetime.
     #[track_caller]
-    pub unsafe fn cast_mut_static<'a, T>(value: &'a mut T) -> &'static mut T {
+    #[must_use]
+    pub unsafe fn cast_lifetime_mut<'a, 'b, T>(value: &'a mut T) -> &'b mut T {
         (value as *mut T).as_mut().unwrap()
     }
 
     /// Move the value to the heap and keep it alive for the rest of the program. Returning a reference
     /// to the value.
-    #[track_caller]
     pub fn leak<T>(value: T) -> &'static T {
-        unsafe {
-            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
-            ptr.write(value);
-            ptr.as_ref().unwrap()
-        }
+        Box::leak(Box::new(value))
     }
 
     /// Move the value to the heap and keep it alive for the rest of the program. Returning a mutable reference
     /// to the value.
-    #[track_caller]
     pub fn leak_mut<T>(value: T) -> &'static mut T {
-        unsafe {
-            let ptr = std::alloc::alloc(Layout::new::<T>()) as *mut T;
-            ptr.write(value);
-            ptr.as_mut().unwrap()
-        }
+        Box::leak(Box::new(value))
     }
 
     /// Allocate a zeroed value on the heap and return a reference to it of type [`T`].
@@ -195,10 +189,7 @@ impl Unsafe {
     /// or that the data is added before handing this reference to other parts of the program.
     #[track_caller]
     pub unsafe fn leak_zeroed<T>() -> &'static T {
-        unsafe {
-            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *const T;
-            ptr.as_ref().unwrap()
-        }
+        Box::leak(Box::new(std::mem::MaybeUninit::<T>::zeroed().assume_init()))
     }
 
     /// Allocate a zeroed value on the heap and return a mutable reference to it of type [`T`].
@@ -208,10 +199,7 @@ impl Unsafe {
     /// or that the data is added before handing this reference to other parts of the program.
     #[track_caller]
     pub unsafe fn leak_zeroed_mut<T>() -> &'static mut T {
-        unsafe {
-            let ptr = std::alloc::alloc_zeroed(Layout::new::<T>()) as *mut T;
-            ptr.as_mut().unwrap()
-        }
+        Box::leak(Box::new(std::mem::MaybeUninit::<T>::zeroed().assume_init()))
     }
 }
 
