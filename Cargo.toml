@@ -1,5 +1,5 @@
 [package]
-name = "mvutils"
+name = "mvutils2"
 version = "1.5.1"
 edition = "2021"
 license-file = "LICENSE"
@@ -8,7 +8,7 @@ authors = [
     "Maxim Savenkov",
     "Julian Hohenhausen"
 ]
-repository = "https://github.com/TeamMV/MVUtils"
+repository = "https://github.com/TeamMV/MVUtils2"
 keywords = [
     "utils",
     "mvteam",

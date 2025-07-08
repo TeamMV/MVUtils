@@ -170,6 +170,26 @@ impl Unsafe {
         (value as *mut T).as_mut().unwrap()
     }
 
+    /// Reinterpret the bytes at this pointer as static reference. This does not change the bytes at the
+    /// reference, nor does it prevent them from being dropped.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
+    /// the rest of the program.
+    pub unsafe fn cast_static<T>(value: &T) -> &'static T {
+        (value as *const T).as_ref().unwrap()
+    }
+
+    /// Reinterpret the bytes at this mutable pointer as static reference. This does not change the bytes at the
+    /// reference, nor does it prevent them from being dropped.
+    ///
+    /// # Safety
+    /// It is entirely up to the user to ensure that the pointer is valid , and will remain valid for
+    /// the rest of the program.
+    pub unsafe fn cast_mut_static<T>(value: &mut T) -> &'static mut T {
+        (value as *mut T).as_mut().unwrap()
+    }
+
     /// Move the value to the heap and keep it alive for the rest of the program. Returning a reference
     /// to the value.
     pub fn leak<T>(value: T) -> &'static T {
