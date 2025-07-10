@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc};
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use crate::save::{Loader, Savable, Saver};
 use crate::unsafe_utils::DangerousCell;
 
 pub struct State<T> {
@@ -91,6 +92,18 @@ impl<T> PartialOrd for State<T> {
 impl<T> Ord for State<T> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.local_version.get_val().cmp(&other.local_version.get_val())
+    }
+}
+
+impl<T: Savable> Savable for State<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        let l = self.read();
+        l.save(saver);
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let t = T::load(loader)?;
+        Ok(Self::new(t))
     }
 }
 
