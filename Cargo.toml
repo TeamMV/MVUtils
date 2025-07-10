@@ -1,6 +1,6 @@
 [package]
 name = "mvutils"
-version = "1.5.1"
+version = "1.5.2"
 edition = "2021"
 license-file = "LICENSE"
 rust-version = "1.75.0"
