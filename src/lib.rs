@@ -17,7 +17,6 @@ pub mod clock;
 
 #[cfg(feature = "savable_arc")]
 pub mod savable_arc;
-mod alloc;
 
 pub use mvutils_proc_macro::{TryFromString, Savable};
 
