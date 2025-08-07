@@ -34,3 +34,4 @@ num-traits = "0.2.19"
 mvutils-proc-macro = { path = "./Proc", version = "1.1.2" }
 hashbrown = "0.15.0"
 parking_lot = "0.12.3"
+abi_stable = "0.11.3"
