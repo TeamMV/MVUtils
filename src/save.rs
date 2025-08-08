@@ -3,7 +3,7 @@ use std::hash::Hash;
 use bytebuffer::ByteBuffer;
 use std::ops::{Bound, Deref, Range, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
 use std::time::{Duration, Instant, SystemTime};
-use abi_stable::std_types::{RHashMap, Tuple2};
+use abi_stable::std_types::{RHashMap, RVec, Tuple2};
 use hashbrown::{HashMap, HashSet};
 use parking_lot::{Mutex, RwLock};
 use crate::bytebuffer::ByteBufferExtras;
@@ -670,6 +670,24 @@ impl<K: Savable + Hash + Eq, V: Savable> Savable for RHashMap<K, V> {
         }
 
         Ok(map)
+    }
+}
+
+impl<T: Savable> Savable for RVec<T> {
+    fn save(&self, saver: &mut impl Saver) {
+        saver.push_u64(self.len() as u64);
+        for t in self {
+            t.save(saver);
+        }
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        let len = u64::load(loader)?;
+        let mut vec = RVec::with_capacity(len as usize);
+        for _ in 0..len {
+            vec.push(T::load(loader)?);
+        }
+        Ok(vec)
     }
 }
 
