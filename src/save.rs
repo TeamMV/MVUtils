@@ -3,7 +3,8 @@ use std::hash::Hash;
 use bytebuffer::ByteBuffer;
 use std::ops::{Bound, Deref, Range, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
 use std::time::{Duration, Instant, SystemTime};
-use abi_stable::std_types::{RHashMap, RVec, Tuple2};
+use abi_stable::std_types::{RHashMap, RString, RVec, Tuple2};
+use abi_stable::traits::IntoReprC;
 use hashbrown::{HashMap, HashSet};
 use parking_lot::{Mutex, RwLock};
 use crate::bytebuffer::ByteBufferExtras;
@@ -476,6 +477,19 @@ impl Savable for String {
     fn load(loader: &mut impl Loader) -> Result<Self, String> {
         loader
             .pop_string()
+            .ok_or("Failed to load String from Loader!".to_string())
+    }
+}
+
+impl Savable for RString {
+    fn save(&self, saver: &mut impl Saver) {
+        saver.push_string(self.as_str());
+    }
+
+    fn load(loader: &mut impl Loader) -> Result<Self, String> {
+        loader
+            .pop_string()
+            .map(|x| x.into_c())
             .ok_or("Failed to load String from Loader!".to_string())
     }
 }
