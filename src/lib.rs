@@ -103,9 +103,11 @@ use std::ops::{Deref, DerefMut};
     #[derive(Debug, TryFromString)]
     enum Enum {
         A,
+        #[casing(Lower)]
         B,
         C,
         #[exclude]
+        #[casing(Upper)]
         HelloWorld,
     }
 
