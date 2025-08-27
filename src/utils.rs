@@ -2,6 +2,7 @@ use crate::lazy;
 use num_traits::{Num, One, ToPrimitive};
 use parking_lot::Mutex;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::ops::{MulAssign, Range};
 use std::ops::{Add, AddAssign, Div, Mul, Rem, Sub, SubAssign};
 use std::panic::PanicHookInfo;
@@ -891,5 +892,15 @@ where
 impl<I: 'static> Clone for Box<dyn CloneableFn<I>> {
     fn clone(&self) -> Box<dyn CloneableFn<I>> {
         self.clone_box()
+    }
+}
+
+pub trait UnwrapDisplay<T, E: Display> {
+    fn unwrapd(self) -> T;
+}
+
+impl<T, E: Display> UnwrapDisplay<T, E> for Result<T, E> {
+    fn unwrapd(self) -> T {
+        self.unwrap_or_else(|x| panic!("{x}"))
     }
 }
