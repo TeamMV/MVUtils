@@ -185,6 +185,7 @@ use std::ops::{Deref, DerefMut};
 
     use mvutils::save::custom::{string8_load, string8_save};
     use crate::bytebuffer::ByteBufferExtras;
+    use crate::once::Lazy;
 
     #[derive(Savable, Debug, Eq, PartialEq)]
     struct ShortString(
