@@ -904,3 +904,13 @@ impl<T, E: Display> UnwrapDisplay<T, E> for Result<T, E> {
         self.unwrap_or_else(|x| panic!("{x}"))
     }
 }
+
+pub fn slice<T: DoubleEndedIterator<Item=A>, R: FromIterator<A>, A>(mut t: T, front: usize, back: usize) -> R {
+    for _ in 0..front {
+        t.next();
+    }
+    for _ in 0..back {
+        t.next_back();
+    }
+    R::from_iter(t)
+}
