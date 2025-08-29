@@ -901,7 +901,7 @@ pub trait UnwrapDisplay<T, E: Display> {
 
 impl<T, E: Display> UnwrapDisplay<T, E> for Result<T, E> {
     fn unwrapd(self) -> T {
-        self.unwrap_or_else(|x| panic!("{x}"))
+        self.unwrap_or_else(|x| panic!("Unwrapped Result on Err value: {x}"))
     }
 }
 
