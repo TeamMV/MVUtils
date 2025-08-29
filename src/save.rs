@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::cell::{Cell, UnsafeCell};
 use std::hash::Hash;
 use bytebuffer::ByteBuffer;
@@ -24,6 +25,9 @@ pub trait Saver {
     fn push_f32(&mut self, value: f32);
     fn push_f64(&mut self, value: f64);
     fn push_string(&mut self, value: &str);
+
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 pub trait Loader {
@@ -132,6 +136,9 @@ pub trait Loader {
     fn peek_f64_unchecked(&mut self) -> f64 {
         self.peek_f64().unwrap()
     }
+
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 impl Saver for ByteBuffer {
@@ -185,6 +192,14 @@ impl Saver for ByteBuffer {
 
     fn push_string(&mut self, value: &str) {
         self.write_string(value);
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -327,6 +342,14 @@ impl Loader for ByteBuffer {
         let result = self.pop_f64();
         self.set_rpos(rpos);
         result
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

@@ -10,6 +10,7 @@ use syn::parse::{ParseBuffer, Parser};
 use syn::punctuated::Punctuated;
 
 mod savable;
+mod savable2;
 
 #[proc_macro_derive(Savable, attributes(unsaved, custom, varint))]
 pub fn derive_savable(input: TokenStream) -> TokenStream {
@@ -34,6 +35,32 @@ pub fn derive_savable(input: TokenStream) -> TokenStream {
         },
         Data::Enum(e) => enumerator(e, name, generics, varint),
         Data::Union(_) => panic!("Deriving Savable for unions is not supported!"),
+    }
+}
+
+#[proc_macro_derive(Savable2, attributes(unsaved, custom, varint))]
+pub fn derive_savable2(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let name = input.ident;
+    let generics = input.generics;
+
+    let varint = input.attrs.iter().any(|attr| {
+        if let Meta::Path(ref p) = attr.meta {
+            p.segments.iter().any(|s| s.ident == "varint")
+        } else {
+            false
+        }
+    });
+
+    match &input.data {
+        Data::Struct(s) => match &s.fields {
+            Fields::Named(fields) => savable2::named(fields, name, generics),
+            Fields::Unnamed(fields) => savable2::unnamed(fields, name, generics),
+            Fields::Unit => savable2::unit(name, generics),
+        },
+        Data::Enum(e) => savable2::enumerator(e, name, generics, varint),
+        Data::Union(_) => panic!("Deriving Savable2 for unions is not supported!"),
     }
 }
 
