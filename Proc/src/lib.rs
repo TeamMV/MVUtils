@@ -231,3 +231,50 @@ enum Casing {
     Upper,
     Both,
 }
+
+#[proc_macro_derive(TryFromStringLegacy, attributes(exclude))]
+pub fn try_from_string_legacy(input: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(input as DeriveInput);
+    let name = input.ident.clone();
+
+    fn is_excluded(v: &&syn::Variant) -> bool {
+        v.attrs.iter().any(|attr| {
+            if let Meta::Path(ref p) = attr.meta {
+                p.segments.iter().any(|s| s.ident == "exclude")
+            } else {
+                false
+            }
+        })
+    }
+
+    match &input.data {
+        Data::Enum(e) => {
+            let values = e.variants.iter().filter(|v| !is_excluded(v)).map(|v| {
+                let str = v.ident.to_string();
+                let alt = str.chars().next().unwrap().to_lowercase().to_string() + &str.chars().skip(1).map(|c| {
+                    if c.is_uppercase() {
+                        "_".to_string() + &c.to_lowercase().to_string()
+                    } else {
+                        c.to_string()
+                    }
+                }).collect::<String>();
+                format!("\"{}\" => Ok(Self::{}),\n\"{}\" => Ok(Self::{}),", str, str, alt, str)
+            }).map(|s| {
+                proc_macro2::TokenStream::from_str(&s).unwrap()
+            });
+            quote! {
+                impl core::str::FromStr for #name {
+                    type Err = ();
+
+                    fn from_str(value: &str) -> Result<Self, Self::Err> {
+                        match value {
+                            #( #values )*
+                            _ => Err(())
+                        }
+                    }
+                }
+            }.into()
+        },
+        _ => panic!("`try_from_string` is only meant for enums")
+    }
+}

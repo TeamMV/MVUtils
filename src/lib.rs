@@ -30,7 +30,7 @@ use std::ops::{Deref, DerefMut};
     use std::time::{Duration, SystemTime};
     use crate as mvutils;
     use bytebuffer::ByteBuffer;
-    use mvutils_proc_macro::{TryFromString};
+    use mvutils_proc_macro::{TryFromString, TryFromStringLegacy};
     use mvutils_proc_macro::Savable;
     use crate::state::State;
     use crate::{update, when};
@@ -114,6 +114,23 @@ use std::ops::{Deref, DerefMut};
 
     #[test]
     fn test_try_from_string() {
+        let a = Enum::from_str("a").unwrap();
+        println!("{:?}", a);
+        let b = Enum::from_str("B").unwrap();
+        println!("{:?}", b);
+        let hello = Enum::from_str("HelloWorld");
+        assert!(hello.is_err());
+    }
+
+    #[derive(Debug, TryFromStringLegacy)]
+    enum EnumLeg {
+        HelloWorld,
+        A,
+        AmazingEnum
+    }
+
+    #[test]
+    fn test_try_from_string_legacy() {
         let a = Enum::from_str("a").unwrap();
         println!("{:?}", a);
         let b = Enum::from_str("B").unwrap();
