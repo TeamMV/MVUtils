@@ -19,7 +19,7 @@ pub mod clock;
 pub mod savable_arc;
 pub mod save2;
 
-pub use mvutils_proc_macro::{TryFromString, Savable};
+pub use mvutils_proc_macro::{TryFromString, TryFromStringLegacy, Savable};
 
 #[cfg(test)]
 #[allow(dead_code)]
