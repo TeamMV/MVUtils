@@ -181,7 +181,7 @@ pub fn try_from_string(input: TokenStream) -> TokenStream {
                     });
 
                     vec![quote! {
-                        _ if #regex_name.is_match() => #constructor
+                        s if #regex_name.is_match(s) => #constructor
                     }]
                 } else {
                     let mut arms = Vec::new();

@@ -24,6 +24,7 @@ pub use mvutils_proc_macro::{TryFromString, TryFromStringLegacy, Savable};
 #[cfg(test)]
 #[allow(dead_code)]
 mod tests {
+use regex::Regex;
 use std::ops::{Deref, DerefMut};
     use std::str::FromStr;
     use std::thread::sleep;
@@ -106,6 +107,7 @@ use std::ops::{Deref, DerefMut};
         A,
         #[casing(Lower)]
         B,
+        #[pattern("c|CC")]
         C,
         #[exclude]
         #[casing(Upper)]
@@ -114,10 +116,12 @@ use std::ops::{Deref, DerefMut};
 
     #[test]
     fn test_try_from_string() {
-        let a = Enum::from_str("a").unwrap();
+        let a = Enum::from_str("A").unwrap();
         println!("{:?}", a);
-        let b = Enum::from_str("B").unwrap();
+        let b = Enum::from_str("b").unwrap();
         println!("{:?}", b);
+        let c = Enum::from_str("CC").unwrap();
+        println!("{:?}", c);
         let hello = Enum::from_str("HelloWorld");
         assert!(hello.is_err());
     }
