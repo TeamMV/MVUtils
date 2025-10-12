@@ -18,6 +18,7 @@ pub mod clock;
 #[cfg(feature = "savable_arc")]
 pub mod savable_arc;
 pub mod save2;
+pub mod into_peek;
 
 pub use mvutils_proc_macro::{TryFromString, TryFromStringLegacy, Savable};
 
@@ -207,6 +208,7 @@ use std::ops::{Deref, DerefMut};
 
     use mvutils::save::custom::{string8_load, string8_save};
     use crate::bytebuffer::ByteBufferExtras;
+    use crate::into_peek::NewIntoPeekable;
     use crate::once::Lazy;
 
     #[derive(Savable, Debug, Eq, PartialEq)]
@@ -294,5 +296,28 @@ use std::ops::{Deref, DerefMut};
 
         let mut buffer = ByteBuffer::from_vec_le(buffer.into_vec());
         assert_eq!(buffer.pop_u16(), Some(0x1000));
+    }
+
+    #[test]
+    fn test_into_peekable() {
+        let v = vec![10, 20, 30];
+        let mut it = v.into_iter().into_peekable();
+
+        // First peek — should see the first element
+        assert_eq!(it.peek(), Some(10));
+
+        // Multiple peeks shouldn’t advance the iterator
+        assert_eq!(it.peek(), Some(10));
+        assert_eq!(it.peek(), Some(10));
+
+        // Now consume elements with next()
+        assert_eq!(it.next(), Some(10));
+        assert_eq!(it.peek(), Some(20)); // peek again
+        assert_eq!(it.next(), Some(20));
+        assert_eq!(it.next(), Some(30));
+
+        // Should be exhausted now
+        assert_eq!(it.peek(), None);
+        assert_eq!(it.next(), None);
     }
 }
