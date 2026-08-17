@@ -1,5 +1,3 @@
-#![feature(array_try_from_fn)]
-
 pub mod args;
 pub mod hashers;
 pub mod once;

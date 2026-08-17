@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::cell::{Cell, UnsafeCell};
 use std::hash::Hash;
+use std::mem::MaybeUninit;
 use bytebuffer::ByteBuffer;
 use std::ops::{Bound, Deref, Range, RangeFrom, RangeInclusive, RangeTo, RangeToInclusive};
 use std::time::{Duration, Instant, SystemTime};
@@ -566,7 +567,13 @@ impl<T: Savable, const N: usize> Savable for [T; N] {
     }
 
     fn load(loader: &mut impl Loader) -> Result<Self, String> {
-        core::array::try_from_fn(|_| T::load(loader))
+        let mut array = [const { MaybeUninit::uninit() }; N];
+        for i in 0..N {
+            array[i] = MaybeUninit::new(T::load(loader)?);
+        }
+
+        // If any value is left uninitialized, we have already returned an error out of the function
+        Ok(array.map(|item| unsafe { item.assume_init() }))
     }
 }
 
