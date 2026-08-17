@@ -17,11 +17,11 @@ impl<T> State<T> {
         }
     }
 
-    pub fn read(&self) -> RwLockReadGuard<T> {
+    pub fn read(&self) -> RwLockReadGuard<'_, T> {
         self.inner.1.read()
     }
 
-    pub fn write(&self) -> StateWriteGuard<T> {
+    pub fn write(&self) -> StateWriteGuard<'_, T> {
         StateWriteGuard {
             inner: self.inner.1.write(),
             ptr: self.inner.0.get_mut(),
@@ -45,11 +45,7 @@ impl<T> State<T> {
     }
 
     pub fn force_outdated(&self) {
-        if self.inner.0.get_val() == 0 {
-            self.local_version.replace(u64::MAX);
-        } else {
-            self.local_version.replace(0);
-        }
+        self.local_version.replace(self.inner.0.get_val().wrapping_sub(1));
     }
 
     pub fn map<U>(&self, mapper: fn(&T) -> U) -> MappedState<T, U> {
@@ -177,7 +173,7 @@ impl<T, U> MappedState<T, U> {
         }
     }
 
-    pub fn write(&self) -> StateWriteGuard<T> {
+    pub fn write(&self) -> StateWriteGuard<'_, T> {
         StateWriteGuard {
             inner: self.old.inner.1.write(),
             ptr: self.old.inner.0.get_mut(),
@@ -201,11 +197,7 @@ impl<T, U> MappedState<T, U> {
     }
 
     pub fn force_outdated(&self) {
-        if self.old.inner.0.get_val() == 0 {
-            self.old.local_version.replace(u64::MAX);
-        } else {
-            self.old.local_version.replace(0);
-        }
+        self.old.local_version.replace(self.old.inner.0.get_val().wrapping_sub(1));
     }
 }
 

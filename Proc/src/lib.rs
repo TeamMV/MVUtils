@@ -170,14 +170,14 @@ pub fn try_from_string(input: TokenStream) -> TokenStream {
 
                 if let Some(custom) = custom {
                     vec![quote! {
-                        s if [#(#custom),*].contains(s) => #constructor
+                        s if [#(#custom),*].contains(&s) => #constructor
                     }]
                 } else if let Some(pattern) = pattern {
                     let regex_name_s = format!("{name}_{name_str}_regex");
                     let regex_name = Ident::new(&regex_name_s, Span::call_site());
 
                     statics.extend(quote! {
-                        static #regex_name: Lazy<Regex> = Lazy::new(|| Regex::new(#pattern).unwrap());
+                        static #regex_name: mvutils::once::Lazy<regex::Regex> = mvutils::once::Lazy::new(|| regex::Regex::new(#pattern).unwrap());
                     });
 
                     vec![quote! {

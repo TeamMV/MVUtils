@@ -111,6 +111,8 @@ use std::ops::{Deref, DerefMut};
         #[exclude]
         #[casing(Upper)]
         HelloWorld,
+        #[custom("hello")]
+        CustomA
     }
 
     #[test]
